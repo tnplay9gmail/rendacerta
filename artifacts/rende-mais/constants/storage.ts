@@ -4,7 +4,7 @@ export const STORAGE_KEYS = {
   FAVORITES: 'favorites',
 } as const;
 
-export type AmountRange = 'ate_5k' | '5k_20k' | 'acima_20k';
+export type AmountRange = 'ate_1k' | '1k_5k' | '5k_20k' | '20k_50k' | 'acima_50k';
 export type LiquidityPreference = 'imediata' | 'meses' | 'longo';
 export type RiskPreference = 'taxa' | 'seguranca';
 
@@ -15,7 +15,9 @@ export interface UserProfile {
 }
 
 export const AMOUNT_RANGES: Record<AmountRange, { label: string; value: number }> = {
-  ate_5k: { label: 'Até R$ 5.000', value: 2500 },
-  '5k_20k': { label: 'Entre R$ 5.000 e R$ 20.000', value: 12500 },
-  acima_20k: { label: 'Mais de R$ 20.000', value: 30000 },
+  ate_1k: { label: 'Ate R$ 1.000', value: 500 },
+  '1k_5k': { label: 'R$ 1.000 a R$ 5.000', value: 3000 },
+  '5k_20k': { label: 'R$ 5.000 a R$ 20.000', value: 12500 },
+  '20k_50k': { label: 'R$ 20.000 a R$ 50.000', value: 35000 },
+  acima_50k: { label: 'Acima de R$ 50.000', value: 80000 },
 };

@@ -11,9 +11,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/colors';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { LiquidityType, InvestmentType } from '@/constants/data';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -158,7 +158,7 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
                 </View>
                 {draft.investmentType === key && (
                   <View style={styles.checkCircle}>
-                    <Feather name="check" size={13} color={Colors.white} />
+                    <AppIcon name="check" size={13} color={Colors.white} weight="fill" />
                   </View>
                 )}
               </TouchableOpacity>
@@ -224,7 +224,7 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
               <View style={styles.toggleRow}>
                 <View style={styles.toggleLeft}>
                   <View style={[styles.toggleIcon, { backgroundColor: Colors.fgc.light }]}>
-                    <Feather name="shield" size={16} color={Colors.fgc.badge} />
+                    <AppIcon name="shield" size={16} color={Colors.fgc.badge} />
                   </View>
                   <View>
                     <Text style={styles.toggleLabel}>Protegido pelo FGC</Text>
@@ -242,7 +242,7 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
               <View style={styles.toggleRow}>
                 <View style={styles.toggleLeft}>
                   <View style={[styles.toggleIcon, { backgroundColor: Colors.brand[50] }]}>
-                    <Feather name="tag" size={16} color={Colors.brand[500]} />
+                    <AppIcon name="tag" size={16} color={Colors.brand[500]} />
                   </View>
                   <View>
                     <Text style={styles.toggleLabel}>Sem imposto de renda</Text>

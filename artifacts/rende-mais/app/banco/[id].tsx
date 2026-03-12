@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import * as Haptics from 'expo-haptics';
 import { Colors, shadows } from '@/constants/colors';
 import { BANKS, calculateReturn, calculateSavingsReturn, formatCurrency, INVESTMENT_LABELS, LIQUIDITY_LABELS, getRiskColor, getRiskLabel } from '@/constants/data';
@@ -52,8 +52,8 @@ export default function BancoDetail() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => { Haptics.selectionAsync(); router.back(); }}>
-          <Feather name="arrow-left" size={22} color={Colors.neutral[950]} />
+          <TouchableOpacity style={styles.backButton} onPress={() => { Haptics.selectionAsync(); router.back(); }}>
+          <AppIcon name="arrow-left" size={22} color={Colors.neutral[950]} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{bank.shortName}</Text>
         <View style={{ width: 40 }} />
@@ -127,7 +127,7 @@ export default function BancoDetail() {
 
             {gainVsSavings > 0 && (
               <View style={styles.vsSavingsBox}>
-                <Feather name="trending-up" size={16} color={Colors.brand[500]} />
+                <AppIcon name="trending-up" size={16} color={Colors.brand[500]} />
                 <Text style={styles.vsSavingsText}>
                   Comparado à poupança, você ganha {formatCurrency(gainVsSavings)} a mais em 12 meses
                 </Text>
@@ -169,7 +169,7 @@ export default function BancoDetail() {
           <Text style={styles.sectionTitle}>O que você precisa saber</Text>
           <View style={styles.detailsCard}>
             <View style={styles.detailRow}>
-              <Feather name="shield" size={16} color={Colors.fgc.badge} />
+              <AppIcon name="shield" size={16} color={Colors.fgc.badge} />
               <Text style={styles.detailText}>
                 {bank.fgcCovered
                   ? 'Dinheiro protegido pelo governo até R$ 250 mil'
@@ -177,17 +177,17 @@ export default function BancoDetail() {
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Feather name="file-text" size={16} color={Colors.neutral[400]} />
+              <AppIcon name="file-text" size={16} color={Colors.neutral[400]} />
               <Text style={styles.detailText}>
                 {bank.hasTax ? 'Paga imposto de renda (IR regressivo)' : 'Livre de imposto de renda'}
               </Text>
             </View>
             <View style={styles.detailRow}>
-              <Feather name="clock" size={16} color={Colors.neutral[400]} />
+              <AppIcon name="clock" size={16} color={Colors.neutral[400]} />
               <Text style={styles.detailText}>{LIQUIDITY_LABELS[bank.liquidity].label}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Feather name="dollar-sign" size={16} color={Colors.neutral[400]} />
+              <AppIcon name="dollar-sign" size={16} color={Colors.neutral[400]} />
               <Text style={styles.detailText}>
                 {bank.minimumAmount === 0
                   ? 'Sem valor mínimo para investir'
@@ -219,7 +219,7 @@ export default function BancoDetail() {
           activeOpacity={0.85}
         >
           <Text style={styles.investButtonText}>Abrir conta na {bank.shortName}</Text>
-          <Feather name="external-link" size={18} color={Colors.white} />
+          <AppIcon name="external-link" size={18} color={Colors.white} />
         </TouchableOpacity>
       </View>
 

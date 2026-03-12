@@ -9,11 +9,11 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon, AppIconName } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 import { LiquidityPreference, STORAGE_KEYS } from '@/constants/storage';
 
-const OPTIONS: { key: LiquidityPreference; label: string; sub: string; icon: string }[] = [
+const OPTIONS: { key: LiquidityPreference; label: string; sub: string; icon: AppIconName }[] = [
   { key: 'imediata', label: 'Quero poder sacar quando quiser', sub: 'Liquidez imediata (D+0)', icon: 'zap' },
   { key: 'meses', label: 'Posso esperar alguns meses', sub: 'Liquidez em D+30', icon: 'calendar' },
   { key: 'longo', label: 'Não vou precisar por mais de 1 ano', sub: 'Maior taxa possível', icon: 'trending-up' },
@@ -57,9 +57,9 @@ export default function PorQuantoTempo() {
     <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
       <ProgressDots current={2} />
 
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Feather name="arrow-left" size={22} color={Colors.neutral[700]} />
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <AppIcon name="arrow-left" size={22} color={Colors.neutral[700]} />
+        </TouchableOpacity>
 
       <View style={styles.content}>
         <Text style={styles.headline}>Quando você pode precisar do dinheiro?</Text>
@@ -76,7 +76,7 @@ export default function PorQuantoTempo() {
               activeOpacity={0.8}
             >
               <View style={[styles.iconBox, selected === key && styles.iconBoxSelected]}>
-                <Feather name={icon as any} size={20} color={selected === key ? Colors.brand[500] : Colors.neutral[400]} />
+                <AppIcon name={icon} size={20} color={selected === key ? Colors.brand[500] : Colors.neutral[400]} />
               </View>
               <View style={styles.optionTexts}>
                 <Text style={[styles.optionLabel, selected === key && styles.optionLabelSelected]}>
@@ -87,7 +87,7 @@ export default function PorQuantoTempo() {
                 </Text>
               </View>
               {selected === key && (
-                <Feather name="check-circle" size={20} color={Colors.brand[500]} />
+                <AppIcon name="check-circle" size={20} color={Colors.brand[500]} weight="fill" />
               )}
             </TouchableOpacity>
           ))}
@@ -101,7 +101,7 @@ export default function PorQuantoTempo() {
         activeOpacity={0.85}
       >
         <Text style={styles.buttonText}>Próximo</Text>
-        <Feather name="arrow-right" size={20} color={Colors.white} />
+        <AppIcon name="arrow-right" size={20} color={Colors.white} />
       </TouchableOpacity>
     </View>
   );

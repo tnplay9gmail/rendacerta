@@ -4,13 +4,14 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  TextInput,
   Animated,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 import { BANKS, CURRENT_CDI_RATE, Bank } from '@/constants/data';
 import { OfferCard } from '@/components/OfferCard';
@@ -22,8 +23,7 @@ function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour >= 6 && hour < 12) return 'Bom dia';
   if (hour >= 12 && hour < 18) return 'Boa tarde';
-  if (hour >= 18 && hour < 23) return 'Boa noite';
-  return 'Oi';
+  return 'Boa noite';
 }
 
 function countActiveFilters(f: FilterState): number {
@@ -35,6 +35,14 @@ function countActiveFilters(f: FilterState): number {
     f.noTaxOnly,
     f.maxMinimum > 0,
   ].filter(Boolean).length;
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 function applyFilters(banks: Bank[], f: FilterState): Bank[] {
@@ -51,14 +59,13 @@ function applyFilters(banks: Bank[], f: FilterState): Bank[] {
     .sort((a, b) => b.cdiRate - a.cdiRate);
 }
 
-const HEADER_HEIGHT = 160;
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [affiliateBank, setAffiliateBank] = useState<Bank | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [bankQuery, setBankQuery] = useState('');
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -70,11 +77,16 @@ export default function HomeScreen() {
   });
   const headerBgOpacity = scrollY.interpolate({
     inputRange: [0, 80],
-    outputRange: [0, 0.7],
+    outputRange: [0, 0.1],
     extrapolate: 'clamp',
   });
 
-  const filteredBanks = applyFilters(BANKS, filters);
+  const normalizedQuery = normalizeText(bankQuery);
+  const filteredBanks = applyFilters(BANKS, filters).filter((bank) => {
+    if (!normalizedQuery) return true;
+    const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
+    return haystack.includes(normalizedQuery);
+  });
   const activeCount = countActiveFilters(filters);
 
   const onRefresh = useCallback(() => {
@@ -93,11 +105,11 @@ export default function HomeScreen() {
       <Animated.View
         style={[
           styles.stickyHeader,
-          { paddingTop: insets.top, opacity: headerBlurOpacity },
+          { paddingTop: insets.top, opacity: headerBlurOpacity, height: insets.top },
         ]}
         pointerEvents="none"
       >
-        <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFillObject} />
+        <BlurView intensity={18} tint="light" style={StyleSheet.absoluteFillObject} />
         <Animated.View
           style={[
             StyleSheet.absoluteFillObject,
@@ -135,7 +147,15 @@ export default function HomeScreen() {
               onPress={() => setFilterOpen(true)}
               activeOpacity={0.8}
             >
-              <Feather name="sliders" size={17} color={activeCount > 0 ? Colors.white : Colors.neutral[700]} />
+              <AppIcon
+                name="sliders"
+                size={16}
+                color={activeCount > 0 ? Colors.white : Colors.neutral[800]}
+                weight={activeCount > 0 ? 'fill' : 'regular'}
+              />
+              <Text style={[styles.filterText, activeCount > 0 && styles.filterTextActive]}>
+                Filtrar
+              </Text>
               {activeCount > 0 && (
                 <View style={styles.filterBadge}>
                   <Text style={styles.filterBadgeText}>{activeCount}</Text>
@@ -148,13 +168,35 @@ export default function HomeScreen() {
           <View style={styles.cdiBubbleWrap}>
             <BlurView intensity={60} tint="light" style={styles.cdiBubble}>
               <View style={styles.cdiBubbleOverlay} />
-              <Feather name="activity" size={13} color={Colors.brand[500]} />
+              <AppIcon name="activity" size={13} color={Colors.brand[500]} />
               <Text style={styles.cdiBubbleText}>
                 CDI atual:{' '}
                 <Text style={styles.cdiBubbleValue}>{CURRENT_CDI_RATE}% ao ano</Text>
               </Text>
             </BlurView>
           </View>
+        </View>
+
+        {/* Bank search */}
+        <View style={styles.searchWrap}>
+          <AppIcon name="search" size={16} color={Colors.neutral[400]} />
+          <TextInput
+            style={styles.searchInput}
+            value={bankQuery}
+            onChangeText={setBankQuery}
+            placeholder="Buscar banco pelo nome"
+            placeholderTextColor={Colors.neutral[300]}
+            returnKeyType="search"
+          />
+          {bankQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setBankQuery('')}
+              style={styles.searchClear}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <AppIcon name="x" size={14} color={Colors.neutral[400]} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Active filter chips */}
@@ -192,7 +234,7 @@ export default function HomeScreen() {
                 </View>
               )}
               <TouchableOpacity style={styles.clearChip} onPress={() => setFilters(DEFAULT_FILTERS)}>
-                <Feather name="x" size={12} color={Colors.neutral[500]} />
+                <AppIcon name="x" size={12} color={Colors.neutral[500]} />
                 <Text style={styles.clearChipText}>Limpar</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -222,7 +264,7 @@ export default function HomeScreen() {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Feather name="search" size={36} color={Colors.neutral[200]} />
+              <AppIcon name="search" size={36} color={Colors.neutral[200]} />
               <Text style={styles.emptyTitle}>Nenhum banco com esses critérios</Text>
               <TouchableOpacity onPress={() => setFilters(DEFAULT_FILTERS)} style={styles.emptyBtn}>
                 <Text style={styles.emptyBtnText}>Limpar filtros</Text>
@@ -256,7 +298,6 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: HEADER_HEIGHT,
     zIndex: 10,
     overflow: 'hidden',
   },
@@ -296,17 +337,30 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   filterBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: Colors.neutral[100],
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
     justifyContent: 'center',
     marginTop: 4,
     position: 'relative',
   },
   filterBtnActive: {
     backgroundColor: Colors.neutral[950],
+    borderColor: Colors.neutral[950],
+  },
+  filterText: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.neutral[800],
+  },
+  filterTextActive: {
+    color: Colors.white,
   },
   filterBadge: {
     position: 'absolute',
@@ -352,6 +406,35 @@ const styles = StyleSheet.create({
   cdiBubbleValue: {
     fontFamily: 'Inter_700Bold',
     color: Colors.brand[600],
+  },
+
+  // Search
+  searchWrap: {
+    marginTop: 12,
+    marginHorizontal: 20,
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.neutral[900],
+  },
+  searchClear: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: Colors.neutral[100],
   },
 
   // Active filters

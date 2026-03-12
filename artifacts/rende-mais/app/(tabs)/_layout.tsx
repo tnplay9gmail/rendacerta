@@ -1,20 +1,60 @@
-import { BlurView } from 'expo-blur';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Tabs } from 'expo-router';
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
-import { SymbolView } from 'expo-symbols';
-import { Feather } from '@expo/vector-icons';
 import React from 'react';
+import { BlurView } from 'expo-blur';
+import { Tabs } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 
+const isIOS = Platform.OS === 'ios';
+const isWeb = Platform.OS === 'web';
+
+function getNativeTabs() {
+  if (!isIOS) return null;
+  try {
+    // Native-only module; avoid bundling for web.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('expo-router/unstable-native-tabs') as typeof import('expo-router/unstable-native-tabs');
+  } catch {
+    return null;
+  }
+}
+
+function getSymbolView() {
+  if (!isIOS) return null;
+  try {
+    // Native-only module; avoid bundling for web.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return (require('expo-symbols') as typeof import('expo-symbols')).SymbolView;
+  } catch {
+    return null;
+  }
+}
+
+function isLiquidGlassEnabled(): boolean {
+  if (!isIOS) return false;
+  try {
+    // Native-only module; avoid bundling for web.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { isLiquidGlassAvailable } = require('expo-glass-effect') as typeof import('expo-glass-effect');
+    return isLiquidGlassAvailable();
+  } catch {
+    return false;
+  }
+}
+
 function NativeTabLayout() {
+  const nativeTabs = getNativeTabs();
+  if (!nativeTabs) {
+    return <ClassicTabLayout />;
+  }
+  const { NativeTabs, Icon, Label } = nativeTabs;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} />
-        <Label>InÃ­cio</Label>
+        <Label>Início</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="comparar">
         <Icon sf={{ default: 'arrow.left.arrow.right', selected: 'arrow.left.arrow.right' }} />
@@ -33,9 +73,8 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const isIOS = Platform.OS === 'ios';
-  const isWeb = Platform.OS === 'web';
   const insets = useSafeAreaInsets();
+  const SymbolView = getSymbolView();
 
   return (
     <Tabs
@@ -63,12 +102,12 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'InÃ­cio',
+          title: 'Início',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
+            isIOS && SymbolView ? (
               <SymbolView name="chart.bar" tintColor={color} size={24} />
             ) : (
-              <Feather name="bar-chart-2" size={22} color={color} />
+              <AppIcon name="bar-chart-2" size={22} color={color} />
             ),
         }}
       />
@@ -77,10 +116,10 @@ function ClassicTabLayout() {
         options={{
           title: 'Comparar',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
+            isIOS && SymbolView ? (
               <SymbolView name="arrow.left.arrow.right" tintColor={color} size={24} />
             ) : (
-              <Feather name="columns" size={22} color={color} />
+              <AppIcon name="columns" size={22} color={color} />
             ),
         }}
       />
@@ -89,10 +128,10 @@ function ClassicTabLayout() {
         options={{
           title: 'Calcular',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
+            isIOS && SymbolView ? (
               <SymbolView name="calculator" tintColor={color} size={24} />
             ) : (
-              <Feather name="percent" size={22} color={color} />
+              <AppIcon name="percent" size={22} color={color} />
             ),
         }}
       />
@@ -101,10 +140,10 @@ function ClassicTabLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
+            isIOS && SymbolView ? (
               <SymbolView name="person" tintColor={color} size={24} />
             ) : (
-              <Feather name="user" size={22} color={color} />
+              <AppIcon name="user" size={22} color={color} />
             ),
         }}
       />
@@ -113,7 +152,7 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
+  if (isLiquidGlassEnabled()) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;

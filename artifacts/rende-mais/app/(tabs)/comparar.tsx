@@ -129,35 +129,54 @@ export default function CompararScreen() {
 
                 return (
                   <View key={bank.id} style={[styles.compareCard, bank.isRecommended && styles.compareCardTop]}>
-                    {bank.isRecommended && (
-                      <View style={styles.topBadge}>
-                        <Text style={styles.topBadgeText}>Melhor</Text>
+                    <View style={styles.compareHeader}>
+                      <BankLogo bank={bank} size={38} />
+                      <View style={styles.compareHeaderText}>
+                        <Text style={styles.compareName}>{bank.name}</Text>
+                        <Text style={styles.compareMeta}>
+                          {bank.cdiRate.toFixed(1)}% CDI - {bank.hasTax ? 'Com imposto' : 'Sem imposto'}
+                        </Text>
                       </View>
-                    )}
+                      {bank.isRecommended && (
+                        <View style={styles.topBadgeInline}>
+                          <Text style={styles.topBadgeText}>Melhor</Text>
+                        </View>
+                      )}
+                    </View>
 
-                    <BankLogo bank={bank} size={36} />
-                    <Text style={styles.compareName}>{bank.shortName}</Text>
-                    <Text style={styles.compareRate}>{bank.cdiRate.toFixed(1)}%</Text>
-                    <Text style={styles.compareRateLabel}>ao ano</Text>
+                    <View style={styles.metricRow}>
+                      <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>
+                          Lucro em {months < 12 ? `${months} meses` : months === 12 ? '1 ano' : '2 anos'}
+                        </Text>
+                        <Text style={styles.metricValue}>{formatCurrency(net)}</Text>
+                      </View>
+                      <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>Media por mes</Text>
+                        <Text style={styles.metricValue}>{formatCurrency(monthly)}</Text>
+                      </View>
+                    </View>
 
-                    <View style={styles.compareSep} />
-
-                    <Text style={styles.compareNetLabel}>Lucro em {months < 12 ? `${months} meses` : months === 12 ? '1 ano' : '2 anos'}</Text>
-                    <Text style={styles.compareNet}>{formatCurrency(net)}</Text>
-                    <Text style={styles.compareMonthly}>{formatCurrency(monthly)}/mês</Text>
+                    <View style={styles.metricRow}>
+                      <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>Liquidez</Text>
+                        <Text style={styles.metricValueSmall}>
+                          {LIQUIDITY_LABELS[bank.liquidity].label}
+                        </Text>
+                      </View>
+                      <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>Imposto</Text>
+                        <Text style={styles.metricValueSmall}>
+                          {bank.hasTax ? 'Com imposto' : 'Sem imposto'}
+                        </Text>
+                      </View>
+                    </View>
 
                     {extraVsSavings > 0 && (
-                      <View style={styles.vsBox}>
-                        <Text style={styles.vsText}>+{formatCurrency(extraVsSavings)}{'\n'}vs poupança</Text>
+                      <View style={styles.vsRow}>
+                        <Text style={styles.vsText}>+{formatCurrency(extraVsSavings)} vs poupanca</Text>
                       </View>
                     )}
-
-                    <Text style={styles.compareLiquidity}>
-                      {LIQUIDITY_LABELS[bank.liquidity].label}
-                    </Text>
-                    <Text style={styles.compareTax}>
-                      {bank.hasTax ? 'Com imposto' : 'Sem imposto'}
-                    </Text>
                   </View>
                 );
               })}
@@ -228,45 +247,52 @@ const styles = StyleSheet.create({
   bankChipSelected: { borderColor: Colors.brand[500], backgroundColor: Colors.brand[50] },
   bankChipText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[600] },
   bankChipTextSelected: { color: Colors.brand[600] },
-  compareCards: { flexDirection: 'row', gap: 10 },
+  compareCards: { gap: 12 },
   compareCard: {
-    flex: 1,
     backgroundColor: Colors.white,
     borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    gap: 5,
+    padding: 16,
     borderWidth: 1,
     borderColor: Colors.neutral[100],
-    position: 'relative',
+    gap: 12,
   },
   compareCardTop: { borderColor: Colors.brand[300], borderWidth: 1.5 },
-  topBadge: {
-    position: 'absolute',
-    top: -11,
+  compareHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  compareHeaderText: { flex: 1 },
+  compareName: { fontSize: 15, fontFamily: 'Inter_700Bold', color: Colors.neutral[950] },
+  compareMeta: { fontSize: 12, fontFamily: 'Inter_500Medium', color: Colors.neutral[400], marginTop: 2 },
+  topBadgeInline: {
     backgroundColor: Colors.brand[500],
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 999,
   },
   topBadgeText: { color: Colors.white, fontSize: 11, fontFamily: 'Inter_700Bold' },
-  compareName: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[600] },
-  compareRate: { fontSize: 26, fontFamily: 'Inter_700Bold', color: Colors.brand[500], marginTop: 4 },
-  compareRateLabel: { fontSize: 11, fontFamily: 'Inter_400Regular', color: Colors.neutral[400] },
-  compareSep: { height: 1, backgroundColor: Colors.neutral[100], width: '100%', marginVertical: 8 },
-  compareNetLabel: { fontSize: 10, fontFamily: 'Inter_500Medium', color: Colors.neutral[400], textAlign: 'center' },
-  compareNet: { fontSize: 15, fontFamily: 'Inter_700Bold', color: Colors.neutral[950], textAlign: 'center' },
-  compareMonthly: { fontSize: 11, fontFamily: 'Inter_400Regular', color: Colors.neutral[400] },
-  vsBox: {
-    backgroundColor: Colors.brand[50],
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginTop: 4,
+  metricRow: { flexDirection: 'row', gap: 12 },
+  metricItem: {
+    flex: 1,
+    backgroundColor: Colors.neutral[50],
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: Colors.neutral[100],
   },
-  vsText: { fontSize: 10, fontFamily: 'Inter_600SemiBold', color: Colors.brand[600], textAlign: 'center' },
-  compareLiquidity: { fontSize: 10, fontFamily: 'Inter_400Regular', color: Colors.neutral[400], marginTop: 4, textAlign: 'center' },
-  compareTax: { fontSize: 10, fontFamily: 'Inter_400Regular', color: Colors.neutral[400], textAlign: 'center' },
+  metricLabel: { fontSize: 11, fontFamily: 'Inter_500Medium', color: Colors.neutral[400] },
+  metricValue: { fontSize: 16, fontFamily: 'Inter_700Bold', color: Colors.neutral[950], marginTop: 4 },
+  metricValueSmall: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[700], marginTop: 4 },
+  vsRow: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.brand[50],
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  vsText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: Colors.brand[600] },
   savingsRef: {
     backgroundColor: Colors.white,
     borderRadius: 14,

@@ -9,11 +9,11 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon, AppIconName } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 import { RiskPreference, STORAGE_KEYS } from '@/constants/storage';
 
-const OPTIONS: { key: RiskPreference; label: string; sub: string; icon: string; color: string }[] = [
+const OPTIONS: { key: RiskPreference; label: string; sub: string; icon: AppIconName; color: string }[] = [
   {
     key: 'taxa',
     label: 'Quero a maior taxa possível',
@@ -70,7 +70,7 @@ export default function Prioridade() {
       <ProgressDots current={3} />
 
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Feather name="arrow-left" size={22} color={Colors.neutral[700]} />
+        <AppIcon name="arrow-left" size={22} color={Colors.neutral[700]} />
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -88,7 +88,7 @@ export default function Prioridade() {
               activeOpacity={0.8}
             >
               <View style={[styles.iconBox, { backgroundColor: selected === key ? `${color}20` : Colors.neutral[100] }]}>
-                <Feather name={icon as any} size={28} color={selected === key ? color : Colors.neutral[400]} />
+                <AppIcon name={icon} size={28} color={selected === key ? color : Colors.neutral[400]} />
               </View>
               <Text style={[styles.optionLabel, selected === key && { color: Colors.neutral[950] }]}>
                 {label}
@@ -98,7 +98,7 @@ export default function Prioridade() {
               </Text>
               {selected === key && (
                 <View style={[styles.checkmark, { backgroundColor: color }]}>
-                  <Feather name="check" size={14} color={Colors.white} />
+                  <AppIcon name="check" size={14} color={Colors.white} weight="fill" />
                 </View>
               )}
             </TouchableOpacity>
@@ -113,7 +113,7 @@ export default function Prioridade() {
         activeOpacity={0.85}
       >
         <Text style={styles.buttonText}>Ver minha indicação</Text>
-        <Feather name="arrow-right" size={20} color={Colors.white} />
+        <AppIcon name="arrow-right" size={20} color={Colors.white} />
       </TouchableOpacity>
     </View>
   );

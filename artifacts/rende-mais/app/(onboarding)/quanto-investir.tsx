@@ -9,14 +9,16 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 import { AmountRange, STORAGE_KEYS } from '@/constants/storage';
 
 const OPTIONS: { key: AmountRange; label: string; sub: string }[] = [
-  { key: 'ate_5k', label: 'Até R$ 5.000', sub: 'Ótimo pra começar' },
-  { key: '5k_20k', label: 'Entre R$ 5.000 e R$ 20.000', sub: 'Boas opções disponíveis' },
-  { key: 'acima_20k', label: 'Mais de R$ 20.000', sub: 'Melhores taxas do mercado' },
+  { key: 'ate_1k', label: 'Ate R$ 1.000', sub: 'Perfeito para comecar' },
+  { key: '1k_5k', label: 'R$ 1.000 a R$ 5.000', sub: 'Boa faixa de entrada' },
+  { key: '5k_20k', label: 'R$ 5.000 a R$ 20.000', sub: 'Boas opcoes disponiveis' },
+  { key: '20k_50k', label: 'R$ 20.000 a R$ 50.000', sub: 'Mais possibilidades' },
+  { key: 'acima_50k', label: 'Acima de R$ 50.000', sub: 'Melhores taxas do mercado' },
 ];
 
 function ProgressDots({ current }: { current: number }) {
@@ -58,7 +60,7 @@ export default function QuantoInvestir() {
       <ProgressDots current={1} />
 
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Feather name="arrow-left" size={22} color={Colors.neutral[700]} />
+        <AppIcon name="arrow-left" size={22} color={Colors.neutral[700]} />
       </TouchableOpacity>
 
       <View style={styles.content}>
@@ -100,7 +102,7 @@ export default function QuantoInvestir() {
         activeOpacity={0.85}
       >
         <Text style={styles.buttonText}>Próximo</Text>
-        <Feather name="arrow-right" size={20} color={Colors.white} />
+        <AppIcon name="arrow-right" size={20} color={Colors.white} />
       </TouchableOpacity>
     </View>
   );

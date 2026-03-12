@@ -8,11 +8,11 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
 import { Bank, calculateReturn, formatCurrency } from '@/constants/data';
 import { Colors } from '@/constants/colors';
 import { BankLogo } from './BankLogo';
 import { LiquidityPill } from './LiquidityPill';
+import { AppIcon } from '@/components/ui/AppIcon';
 
 interface OfferCardProps {
   bank: Bank;
@@ -83,13 +83,13 @@ export function OfferCard({ bank, investmentAmount = 1000, onInvestPress }: Offe
         <View style={styles.tags}>
           {bank.fgcCovered && (
             <View style={styles.tag}>
-              <Feather name="shield" size={11} color={Colors.fgc.badge} />
+              <AppIcon name="shield" size={11} color={Colors.fgc.badge} />
               <Text style={[styles.tagText, { color: Colors.fgc.badge }]}>Protegido pelo governo</Text>
             </View>
           )}
           {!bank.hasTax && (
             <View style={[styles.tag, styles.tagGreen]}>
-              <Feather name="tag" size={11} color={Colors.brand[600]} />
+              <AppIcon name="tag" size={11} color={Colors.brand[600]} />
               <Text style={[styles.tagText, { color: Colors.brand[600] }]}>Sem imposto</Text>
             </View>
           )}

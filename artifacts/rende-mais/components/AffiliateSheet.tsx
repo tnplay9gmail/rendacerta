@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Bank } from '@/constants/data';
 import { Colors, shadows } from '@/constants/colors';
 import { BankLogo } from './BankLogo';
@@ -75,7 +75,7 @@ export function AffiliateSheet({ bank, visible, onClose }: AffiliateSheetProps) 
           </View>
 
           <View style={styles.infoBox}>
-            <Feather name="shield" size={16} color={Colors.brand[500]} />
+            <AppIcon name="shield" size={16} color={Colors.brand[500]} />
             <Text style={styles.infoText}>
               Parceiro verificado pelo Rende Mais. Seus dados são protegidos.
             </Text>

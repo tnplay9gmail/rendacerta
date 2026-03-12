@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -35,13 +35,13 @@ export default function BoasVindas() {
 
       <View style={styles.illustrationContainer}>
         <View style={styles.illustrationCircle}>
-          <Feather name="trending-up" size={80} color={Colors.brand[500]} />
+          <AppIcon name="trending-up" size={80} color={Colors.brand[500]} />
         </View>
         <View style={styles.sparkle1}>
-          <Feather name="star" size={16} color={Colors.brand[400]} />
+          <AppIcon name="star" size={16} color={Colors.brand[400]} />
         </View>
         <View style={styles.sparkle2}>
-          <Feather name="circle" size={10} color={Colors.brand[200]} />
+          <AppIcon name="circle" size={10} color={Colors.brand[200]} />
         </View>
         <View style={styles.floatCard}>
           <Text style={styles.floatCardText}>+13,2% ao ano</Text>
@@ -62,7 +62,7 @@ export default function BoasVindas() {
           activeOpacity={0.85}
         >
           <Text style={styles.buttonText}>Começar</Text>
-          <Feather name="arrow-right" size={20} color={Colors.white} />
+          <AppIcon name="arrow-right" size={20} color={Colors.white} />
         </TouchableOpacity>
       </View>
     </View>

@@ -10,11 +10,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/colors';
 import { STORAGE_KEYS, UserProfile, AMOUNT_RANGES } from '@/constants/storage';
 import { CURRENT_CDI_RATE } from '@/constants/data';
+
 
 export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
@@ -25,6 +26,7 @@ export default function PerfilScreen() {
       if (val) setProfile(JSON.parse(val));
     });
   }, []);
+
 
   const handleReset = () => {
     Alert.alert(
@@ -51,17 +53,18 @@ export default function PerfilScreen() {
       case 'imediata': return 'Saque quando quiser';
       case 'meses': return 'Posso esperar alguns meses';
       case 'longo': return 'Mais de 1 ano';
-      default: return '—';
+      default: return '-';
     }
   };
 
   const getRiskLabel = () => {
     switch (profile?.riskPref) {
-      case 'taxa': return 'Maior taxa possível';
-      case 'seguranca': return 'Segurança em primeiro lugar';
-      default: return '—';
+      case 'taxa': return 'Maior taxa possivel';
+      case 'seguranca': return 'Seguranca em primeiro lugar';
+      default: return '-';
     }
   };
+
 
   const investorProfile = profile?.riskPref === 'taxa' ? 'Perfil arrojado' : 'Perfil conservador';
 
@@ -81,7 +84,7 @@ export default function PerfilScreen() {
         <View style={styles.section}>
           <View style={styles.profileHero}>
             <View style={styles.avatar}>
-              <Feather name="user" size={28} color={Colors.brand[500]} />
+              <AppIcon name="user" size={28} color={Colors.brand[500]} />
             </View>
             <View style={styles.heroText}>
               <Text style={styles.heroTitle}>{investorProfile}</Text>
@@ -93,12 +96,12 @@ export default function PerfilScreen() {
         {/* Preferences */}
         {profile && (
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Suas preferências</Text>
+            <Text style={styles.sectionLabel}>Suas preferencias</Text>
             <View style={styles.card}>
               <View style={styles.row}>
-                <Text style={styles.rowLabel}>Valor disponível</Text>
+                <Text style={styles.rowLabel}>Valor disponivel</Text>
                 <Text style={styles.rowValue}>
-                  {profile.availableAmount ? AMOUNT_RANGES[profile.availableAmount].label : '—'}
+                  {profile.availableAmount ? AMOUNT_RANGES[profile.availableAmount].label : '-'}
                 </Text>
               </View>
               <View style={styles.separator} />
@@ -145,7 +148,7 @@ export default function PerfilScreen() {
           <View style={[styles.card, { padding: 18 }]}>
             <View style={styles.fgcTop}>
               <View style={styles.fgcIcon}>
-                <Feather name="shield" size={18} color={Colors.fgc.badge} />
+                <AppIcon name="shield" size={18} color={Colors.fgc.badge} />
               </View>
               <Text style={styles.fgcTitle}>Fundo Garantidor de Créditos</Text>
             </View>
@@ -161,15 +164,15 @@ export default function PerfilScreen() {
           <Text style={styles.sectionLabel}>Configurações</Text>
           <View style={styles.card}>
             <TouchableOpacity style={styles.menuItem} onPress={handleReset} activeOpacity={0.7}>
-              <Feather name="sliders" size={18} color={Colors.neutral[500]} />
+              <AppIcon name="sliders" size={18} color={Colors.neutral[500]} />
               <Text style={styles.menuLabel}>Refazer questionário</Text>
-              <Feather name="chevron-right" size={16} color={Colors.neutral[300]} />
+              <AppIcon name="chevron-right" size={16} color={Colors.neutral[300]} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.menuItem} onPress={() => {}} activeOpacity={0.7}>
-              <Feather name="info" size={18} color={Colors.neutral[500]} />
+              <AppIcon name="info" size={18} color={Colors.neutral[500]} />
               <Text style={styles.menuLabel}>Sobre o Rende Mais</Text>
-              <Feather name="chevron-right" size={16} color={Colors.neutral[300]} />
+              <AppIcon name="chevron-right" size={16} color={Colors.neutral[300]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -240,7 +243,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   rowLabel: { fontSize: 14, fontFamily: 'Inter_400Regular', color: Colors.neutral[500] },
-  rowValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[950], flex: 1, textAlign: 'right', marginLeft: 16 },
+  rowValue: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.neutral[950],
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 16,
+  },
   separator: { height: 1, backgroundColor: Colors.neutral[100] },
   ratesRow: {
     flexDirection: 'row',

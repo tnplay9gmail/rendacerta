@@ -10,13 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { AppIcon } from '@/components/ui/AppIcon';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/colors';
 import {
   BANKS,
-  calculateReturn,
-  calculateSavingsReturn,
+  CURRENT_CDI_RATE,
   formatCurrency,
 } from '@/constants/data';
 import { BankLogo } from '@/components/BankLogo';
@@ -33,6 +32,69 @@ function parseValue(formatted: string): number {
   return parseFloat(clean) || 0;
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function calculateReturnWithMonthly(
+  principal: number,
+  monthlyContribution: number,
+  cdiPercent: number,
+  months: number,
+  hasTax: boolean
+): { gross: number; net: number; monthly: number; total: number; invested: number } {
+  const annualRate = (CURRENT_CDI_RATE * cdiPercent) / 100 / 100;
+  const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+  const factor = Math.pow(1 + monthlyRate, months);
+
+  const totalFromPrincipal = principal * factor;
+  const totalFromMonthly = monthlyContribution > 0
+    ? monthlyRate === 0
+      ? monthlyContribution * months
+      : monthlyContribution * ((factor - 1) / monthlyRate)
+    : 0;
+
+  const invested = principal + monthlyContribution * months;
+  const gross = totalFromPrincipal + totalFromMonthly - invested;
+
+  let taxRate = 0;
+  if (hasTax) {
+    if (months <= 6) taxRate = 0.225;
+    else if (months <= 12) taxRate = 0.20;
+    else if (months <= 24) taxRate = 0.175;
+    else taxRate = 0.15;
+  }
+
+  const net = gross * (1 - taxRate);
+  const monthly = months > 0 ? net / months : 0;
+  const total = invested + net;
+
+  return { gross, net, monthly, total, invested };
+}
+
+function calculateSavingsReturnWithMonthly(
+  principal: number,
+  monthlyContribution: number,
+  months: number
+): number {
+  const monthlyRate = 0.005;
+  const factor = Math.pow(1 + monthlyRate, months);
+  const totalFromPrincipal = principal * factor;
+  const totalFromMonthly = monthlyContribution > 0
+    ? monthlyRate === 0
+      ? monthlyContribution * months
+      : monthlyContribution * ((factor - 1) / monthlyRate)
+    : 0;
+
+  const invested = principal + monthlyContribution * months;
+  return totalFromPrincipal + totalFromMonthly - invested;
+}
+
+
 const PERIODS = [
   { label: '3 meses', months: 3 },
   { label: '6 meses', months: 6 },
@@ -43,27 +105,51 @@ const PERIODS = [
 export default function CalcularScreen() {
   const insets = useSafeAreaInsets();
   const [inputValue, setInputValue] = useState('');
+  const [monthlyContribution, setMonthlyContribution] = useState('');
   const [selectedMonths, setSelectedMonths] = useState(12);
+  const [useCustomMonths, setUseCustomMonths] = useState(false);
+  const [customMonths, setCustomMonths] = useState('');
   const [selectedBankId, setSelectedBankId] = useState(BANKS[0].id);
+  const [bankQuery, setBankQuery] = useState('');
+
+  const parsedCustomMonths = parseInt(customMonths, 10);
+  const effectiveMonths =
+    useCustomMonths && Number.isFinite(parsedCustomMonths) && parsedCustomMonths > 0
+      ? parsedCustomMonths
+      : selectedMonths;
 
   const amount = parseValue(inputValue);
+  const monthlyAmount = parseValue(monthlyContribution);
+  const canSimulate = (amount > 0 || monthlyAmount > 0) && effectiveMonths > 0;
+  const normalizedQuery = normalizeText(bankQuery);
+  const filteredBanks = BANKS.filter((bank) => {
+    if (!normalizedQuery) return true;
+    const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
+    return haystack.includes(normalizedQuery);
+  });
   const selectedBank = BANKS.find((b) => b.id === selectedBankId) ?? BANKS[0];
 
   const result = useMemo(() => {
-    if (amount <= 0) return null;
-    return calculateReturn(amount, selectedBank.cdiRate, selectedMonths, selectedBank.hasTax);
-  }, [amount, selectedBank, selectedMonths]);
+    if (!canSimulate) return null;
+    return calculateReturnWithMonthly(
+      amount,
+      monthlyAmount,
+      selectedBank.cdiRate,
+      effectiveMonths,
+      selectedBank.hasTax
+    );
+  }, [amount, monthlyAmount, selectedBank, effectiveMonths, canSimulate]);
 
   const savingsNet = useMemo(() => {
-    if (amount <= 0) return 0;
-    return calculateSavingsReturn(amount, selectedMonths);
-  }, [amount, selectedMonths]);
+    if (!canSimulate) return 0;
+    return calculateSavingsReturnWithMonthly(amount, monthlyAmount, effectiveMonths);
+  }, [amount, monthlyAmount, effectiveMonths, canSimulate]);
 
   const taxLabel = () => {
     if (!selectedBank.hasTax) return 'Sem imposto de renda';
-    if (selectedMonths <= 6) return 'Imposto: 22,5% sobre o lucro';
-    if (selectedMonths <= 12) return 'Imposto: 20% sobre o lucro';
-    if (selectedMonths <= 24) return 'Imposto: 17,5% sobre o lucro';
+    if (effectiveMonths <= 6) return 'Imposto: 22,5% sobre o lucro';
+    if (effectiveMonths <= 12) return 'Imposto: 20% sobre o lucro';
+    if (effectiveMonths <= 24) return 'Imposto: 17,5% sobre o lucro';
     return 'Imposto: 15% sobre o lucro';
   };
 
@@ -100,6 +186,22 @@ export default function CalcularScreen() {
           </View>
         </View>
 
+        {/* Monthly contribution */}
+        <View style={styles.section}>
+          <Text style={styles.question}>Aporte mensal (opcional)</Text>
+          <View style={styles.inputWrapperSoft}>
+            <TextInput
+              style={styles.inputSmall}
+              value={monthlyContribution}
+              onChangeText={(t) => setMonthlyContribution(formatInput(t))}
+              placeholder="R$ 0,00"
+              placeholderTextColor={Colors.neutral[300]}
+              keyboardType="numeric"
+              returnKeyType="done"
+            />
+          </View>
+        </View>
+
         {/* Period */}
         <View style={styles.section}>
           <Text style={styles.question}>Por quanto tempo?</Text>
@@ -107,24 +209,74 @@ export default function CalcularScreen() {
             {PERIODS.map(({ label, months }) => (
               <TouchableOpacity
                 key={months}
-                style={[styles.pill, selectedMonths === months && styles.pillActive]}
-                onPress={() => { Haptics.selectionAsync(); setSelectedMonths(months); }}
+                style={[styles.pill, selectedMonths === months && !useCustomMonths && styles.pillActive]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSelectedMonths(months);
+                  setUseCustomMonths(false);
+                }}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.pillText, selectedMonths === months && styles.pillTextActive]}>
+                <Text style={[styles.pillText, selectedMonths === months && !useCustomMonths && styles.pillTextActive]}>
                   {label}
                 </Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={[styles.pill, useCustomMonths && styles.pillActive]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setUseCustomMonths(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.pillText, useCustomMonths && styles.pillTextActive]}>
+                Outro
+              </Text>
+            </TouchableOpacity>
           </View>
+          {useCustomMonths && (
+            <View style={styles.customMonthRow}>
+              <TextInput
+                style={styles.customMonthInput}
+                value={customMonths}
+                onChangeText={(t) => setCustomMonths(t.replace(/\D/g, ''))}
+                placeholder="Ex: 18"
+                placeholderTextColor={Colors.neutral[300]}
+                keyboardType="numeric"
+                returnKeyType="done"
+              />
+              <Text style={styles.customMonthLabel}>meses</Text>
+            </View>
+          )}
         </View>
 
         {/* Bank picker */}
         <View style={styles.section}>
           <Text style={styles.question}>Em qual banco?</Text>
+          <View style={styles.searchWrap}>
+            <AppIcon name="search" size={16} color={Colors.neutral[400]} />
+            <TextInput
+              style={styles.searchInput}
+              value={bankQuery}
+              onChangeText={setBankQuery}
+              placeholder="Buscar banco pelo nome"
+              placeholderTextColor={Colors.neutral[300]}
+              returnKeyType="search"
+            />
+            {bankQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setBankQuery('')}
+                style={styles.searchClear}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <AppIcon name="x" size={14} color={Colors.neutral[400]} />
+              </TouchableOpacity>
+            )}
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.bankRow}>
-              {BANKS.map((bank) => (
+              {filteredBanks.map((bank) => (
                 <TouchableOpacity
                   key={bank.id}
                   style={[styles.bankOption, selectedBankId === bank.id && styles.bankOptionSelected]}
@@ -145,19 +297,20 @@ export default function CalcularScreen() {
         </View>
 
         {/* Result */}
-        {result && amount > 0 && (
+        {result && canSimulate && (
           <View style={styles.section}>
             <Text style={styles.question}>Resultado da simulação</Text>
 
             {/* Main result */}
             <View style={styles.resultCard}>
               <Text style={styles.resultLabel}>Você terá no final</Text>
-              <Text style={styles.resultTotal}>{formatCurrency(amount + result.net)}</Text>
+              <Text style={styles.resultTotal}>{formatCurrency(result.total)}</Text>
               <Text style={styles.resultSub}>
                 Lucro de{' '}
                 <Text style={styles.resultProfit}>{formatCurrency(result.net)}</Text>
-                {' '}em {selectedMonths < 12 ? `${selectedMonths} meses` : selectedMonths === 12 ? '1 ano' : '2 anos'}
+                {' '}em {effectiveMonths < 12 ? `${effectiveMonths} meses` : effectiveMonths === 12 ? '1 ano' : `${effectiveMonths} meses`}
               </Text>
+              <Text style={styles.resultInvested}>Total investido: {formatCurrency(result.invested)}</Text>
               <Text style={styles.resultMonthly}>
                 ≈ {formatCurrency(result.monthly)} por mês
               </Text>
@@ -170,7 +323,7 @@ export default function CalcularScreen() {
                 <Text style={styles.vsItemValue}>{formatCurrency(savingsNet)}</Text>
               </View>
               <View style={styles.vsArrow}>
-                <Feather name="arrow-right" size={14} color={Colors.neutral[300]} />
+                <AppIcon name="arrow-right" size={14} color={Colors.neutral[300]} />
               </View>
               <View style={styles.vsItem}>
                 <Text style={[styles.vsItemLabel, { color: Colors.brand[600] }]}>
@@ -195,9 +348,9 @@ export default function CalcularScreen() {
         )}
 
         {/* Empty */}
-        {(!amount || amount <= 0) && (
+        {(!canSimulate) && (
           <View style={styles.emptyHint}>
-            <Feather name="edit-3" size={32} color={Colors.neutral[200]} />
+            <AppIcon name="edit-3" size={32} color={Colors.neutral[200]} />
             <Text style={styles.emptyHintText}>
               Digite um valor para ver quanto você vai ganhar
             </Text>
@@ -239,6 +392,19 @@ const styles = StyleSheet.create({
     color: Colors.neutral[950],
     paddingVertical: 18,
   },
+  inputWrapperSoft: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    paddingHorizontal: 16,
+  },
+  inputSmall: {
+    fontSize: 24,
+    fontFamily: 'Inter_700Bold',
+    color: Colors.neutral[900],
+    paddingVertical: 14,
+  },
   pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     paddingHorizontal: 18,
@@ -251,6 +417,55 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: Colors.neutral[950], borderColor: Colors.neutral[950] },
   pillText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: Colors.neutral[600] },
   pillTextActive: { color: Colors.white },
+  customMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  customMonthInput: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    color: Colors.neutral[950],
+  },
+  customMonthLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.neutral[500],
+  },
+  searchWrap: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.neutral[200],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.neutral[900],
+  },
+  searchClear: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: Colors.neutral[100],
+  },
   bankRow: { flexDirection: 'row', gap: 10 },
   bankOption: {
     alignItems: 'center',
@@ -288,6 +503,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.neutral[500],
     marginTop: 4,
+  },
+  resultInvested: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.neutral[400],
+    marginTop: 2,
   },
   resultProfit: {
     fontFamily: 'Inter_700Bold',
