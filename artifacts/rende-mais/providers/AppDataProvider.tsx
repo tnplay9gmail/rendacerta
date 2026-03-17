@@ -44,15 +44,6 @@ type AppDataContextValue = {
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
-const CATALOG_BOOTSTRAP_TIMEOUT_MS = 8000;
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
-  const timeoutPromise = new Promise<null>((resolve) => {
-    setTimeout(() => resolve(null), timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]);
-}
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [banks, setBanks] = useState<Bank[]>(BANKS);
@@ -123,12 +114,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     async function bootstrap(): Promise<void> {
       try {
         await loadCachedCatalog();
-
-        // Never block app startup forever due to network/Supabase stalls.
-        const refreshPromise = refreshCatalog().catch((error) => {
-          console.warn('Falha ao atualizar catalogo remoto:', error);
-        });
-        await withTimeout(refreshPromise, CATALOG_BOOTSTRAP_TIMEOUT_MS);
       } catch (error) {
         console.warn('Falha ao carregar catalogo remoto:', error);
       } finally {
@@ -136,6 +121,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
           setCatalogLoading(false);
         }
       }
+
+      // Refresh remote data in background, without blocking the splash.
+      void refreshCatalog().catch((error) => {
+        console.warn('Falha ao atualizar catalogo remoto:', error);
+      });
     }
 
     void bootstrap();

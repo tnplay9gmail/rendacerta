@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,10 +40,42 @@ function ProgressDots({ current }: { current: number }) {
 export default function QuantoInvestir() {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<AmountRange | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const ctaTopYRef = useRef(0);
+  const viewportHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const currentScrollYRef = useRef(0);
+  const hasAutoScrolledRef = useRef(false);
+
+  const autoScrollToCta = useCallback(() => {
+    if (hasAutoScrolledRef.current) return;
+
+    const viewportHeight = viewportHeightRef.current;
+    const contentHeight = contentHeightRef.current;
+    const ctaTop = ctaTopYRef.current;
+
+    if (viewportHeight <= 0 || contentHeight <= 0 || ctaTop <= 0) return;
+
+    const maxScroll = Math.max(0, contentHeight - viewportHeight);
+    const targetScrollY = Math.max(0, Math.min(ctaTop - 20, maxScroll));
+    const isAlreadyNearTarget = Math.abs(currentScrollYRef.current - targetScrollY) < 24;
+
+    hasAutoScrolledRef.current = true;
+    if (isAlreadyNearTarget) return;
+
+    scrollRef.current?.scrollTo({ y: targetScrollY, animated: true });
+  }, []);
 
   const handleSelect = (key: AmountRange) => {
     Haptics.selectionAsync();
     setSelected(key);
+    setTimeout(() => {
+      autoScrollToCta();
+    }, 120);
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    currentScrollYRef.current = event.nativeEvent.contentOffset.y;
   };
 
   const handleNext = async () => {
@@ -58,12 +92,21 @@ export default function QuantoInvestir() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
       contentContainerStyle={[
         styles.containerContent,
         { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
       ]}
       showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={handleScroll}
+      onLayout={(event) => {
+        viewportHeightRef.current = event.nativeEvent.layout.height;
+      }}
+      onContentSizeChange={(_, height) => {
+        contentHeightRef.current = height;
+      }}
     >
       <ProgressDots current={1} />
 
@@ -103,15 +146,21 @@ export default function QuantoInvestir() {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.button, !selected && styles.buttonDisabled]}
-        onPress={handleNext}
-        disabled={!selected}
-        activeOpacity={0.85}
+      <View
+        onLayout={(event) => {
+          ctaTopYRef.current = event.nativeEvent.layout.y;
+        }}
       >
+        <TouchableOpacity
+          style={[styles.button, !selected && styles.buttonDisabled]}
+          onPress={handleNext}
+          disabled={!selected}
+          activeOpacity={0.85}
+        >
         <Text style={styles.buttonText}>Próximo</Text>
         <AppIcon name="arrow-right" size={20} color={Colors.white} />
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }

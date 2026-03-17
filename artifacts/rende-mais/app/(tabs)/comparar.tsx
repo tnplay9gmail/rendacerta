@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,10 @@ import {
   LIQUIDITY_LABELS,
 } from '@/constants/data';
 import { BankLogo } from '@/components/BankLogo';
+import { ScreenFadeTransition } from '@/components/ui/ScreenFadeTransition';
 import { useAppData } from '@/providers/AppDataProvider';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { WebContainer } from '@/components/web/WebContainer';
 
 const INVESTMENT_VALUES = [1000, 5000, 10000, 50000];
 const PERIOD_MONTHS = [
@@ -29,8 +32,9 @@ const PERIOD_MONTHS = [
 
 export default function CompararScreen() {
   const { banks, currentCdiRate } = useAppData();
-  const sourceBanks = banks.length > 0 ? banks : BANKS;
+  const sourceBanks = useMemo(() => (banks.length > 0 ? banks : BANKS), [banks]);
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
   const [selectedBanks, setSelectedBanks] = useState<string[]>([BANKS[0].id, BANKS[2].id]);
   const [investmentValue, setInvestmentValue] = useState(5000);
   const [months, setMonths] = useState(12);
@@ -45,7 +49,7 @@ export default function CompararScreen() {
     });
   }, [sourceBanks]);
 
-  const toggleBank = (id: string) => {
+  const toggleBank = useCallback((id: string) => {
     Haptics.selectionAsync();
     setSelectedBanks((prev) => {
       if (prev.includes(id)) {
@@ -53,26 +57,41 @@ export default function CompararScreen() {
       }
       return prev.length >= 3 ? [...prev.slice(1), id] : [...prev, id];
     });
-  };
+  }, []);
 
-  const comparedBanks = sourceBanks.filter((b) => selectedBanks.includes(b.id));
-  const bestBankId = comparedBanks.length > 0
-    ? comparedBanks.reduce((best, b) => b.cdiRate > best.cdiRate ? b : best).id
-    : null;
-  const savingsReturn = calculateSavingsReturn(investmentValue, months);
+  const comparedBanks = useMemo(
+    () => sourceBanks.filter((bank) => selectedBanks.includes(bank.id)),
+    [sourceBanks, selectedBanks],
+  );
+  const bestBankId = useMemo(
+    () =>
+      comparedBanks.length > 0
+        ? comparedBanks.reduce((best, bank) => (bank.cdiRate > best.cdiRate ? bank : best)).id
+        : null,
+    [comparedBanks],
+  );
+  const savingsReturn = useMemo(
+    () => calculateSavingsReturn(investmentValue, months),
+    [investmentValue, months],
+  );
 
   return (
+    <ScreenFadeTransition>
     <View style={styles.container}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <Text style={styles.title}>Comparar</Text>
-          <Text style={styles.subtitle}>Escolha até 3 bancos</Text>
+        {/* Header — full width */}
+        <View style={[styles.header, { paddingTop: isDesktop ? 32 : insets.top + 20 }]}>
+          <WebContainer style={{ paddingHorizontal: 20 }}>
+            <Text style={styles.title}>Comparar</Text>
+            <Text style={styles.subtitle}>Escolha até 3 bancos</Text>
+          </WebContainer>
         </View>
+
+        <WebContainer>
 
         {/* Simulation config */}
         <View style={styles.section}>
@@ -114,21 +133,16 @@ export default function CompararScreen() {
         {/* Bank selector */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Selecionar bancos</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.bankScrollContent}
-          >
-            <View style={styles.bankChipRow}>
-              {sourceBanks.map((bank) => {
-                const isSelected = selectedBanks.includes(bank.id);
-                return (
-                  <TouchableOpacity
-                    key={bank.id}
-                    style={[styles.bankChip, isSelected && styles.bankChipSelected]}
-                    onPress={() => toggleBank(bank.id)}
-                    activeOpacity={0.8}
-                  >
+          <View style={styles.bankChipRow}>
+            {sourceBanks.map((bank) => {
+              const isSelected = selectedBanks.includes(bank.id);
+              return (
+                <TouchableOpacity
+                  key={bank.id}
+                  style={[styles.bankChip, isSelected && styles.bankChipSelected]}
+                  onPress={() => toggleBank(bank.id)}
+                  activeOpacity={0.8}
+                >
                     <BankLogo bank={bank} size={20} />
                     <Text style={[styles.bankChipText, isSelected && styles.bankChipTextSelected]}>
                       {bank.shortName}
@@ -136,8 +150,7 @@ export default function CompararScreen() {
                   </TouchableOpacity>
                 );
               })}
-            </View>
-          </ScrollView>
+          </View>
           <Text style={styles.bankSelectorHint}>{selectedBanks.length}/3 selecionados</Text>
         </View>
 
@@ -221,8 +234,10 @@ export default function CompararScreen() {
             </View>
           </View>
         )}
+        </WebContainer>
       </ScrollView>
     </View>
+    </ScreenFadeTransition>
   );
 }
 
@@ -262,7 +277,7 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 13, fontFamily: 'Inter_500Medium', color: Colors.neutral[700] },
   pillTextActive: { color: Colors.brand[600] },
   bankScrollContent: { paddingRight: 20 },
-  bankChipRow: { flexDirection: 'row', gap: 8 },
+  bankChipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   bankChip: {
     flexDirection: 'row',
     alignItems: 'center',

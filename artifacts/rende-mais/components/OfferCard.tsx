@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { memo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Animated,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -23,7 +24,7 @@ interface OfferCardProps {
   onInvestPress?: (bank: Bank) => void;
 }
 
-export function OfferCard({
+export const OfferCard = memo(function OfferCard({
   bank,
   investmentAmount = 1000,
   currentCdiRate = CURRENT_CDI_RATE,
@@ -31,6 +32,9 @@ export function OfferCard({
   onInvestPress,
 }: OfferCardProps) {
   const scale = useRef(new Animated.Value(1)).current;
+  const [hovered, setHovered] = useState(false);
+  const [investHovered, setInvestHovered] = useState(false);
+  const isWeb = Platform.OS === 'web';
 
   const { monthly } = calculateReturnWithBaseCdi(
     investmentAmount,
@@ -46,8 +50,8 @@ export function OfferCard({
   };
 
   const handleInvestPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onInvestPress?.(bank);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handlePressIn = () => {
@@ -57,21 +61,33 @@ export function OfferCard({
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30 }).start();
   };
 
+  const webHoverProps = isWeb
+    ? {
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      }
+    : {};
+
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View style={[{ transform: [{ scale }] }, isWeb && { flex: 1 }]}>
       <TouchableOpacity
-        style={[styles.card, isBest && styles.topCard]}
+        style={[
+          styles.card,
+          isBest && styles.topCard,
+          hovered && styles.cardHovered,
+          isWeb && { cursor: 'pointer' as unknown as undefined, flex: 1 },
+        ]}
         onPress={handleCardPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         activeOpacity={1}
+        {...webHoverProps}
       >
         {/* Top row */}
         <View style={styles.topRow}>
           <BankLogo bank={bank} size={40} />
           <View style={styles.bankMeta}>
-            <Text style={styles.bankName}>{bank.name}</Text>
-            <LiquidityPill type={bank.liquidity} />
+            <Text style={styles.bankName} numberOfLines={1}>{bank.name}</Text>
           </View>
           {isBest && (
             <View style={styles.bestBadge}>
@@ -79,6 +95,7 @@ export function OfferCard({
             </View>
           )}
         </View>
+        <LiquidityPill type={bank.liquidity} />
 
         {/* Rate — the star of the show */}
         <View style={styles.rateBlock}>
@@ -110,19 +127,32 @@ export function OfferCard({
         </View>
 
         {/* CTA */}
-        <TouchableOpacity
-          style={[styles.cta, isBest && styles.ctaPrimary]}
-          onPress={handleInvestPress}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.ctaText, isBest && styles.ctaTextPrimary]}>
-            Investir na {bank.shortName}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ marginTop: 'auto' as unknown as number }}>
+          <TouchableOpacity
+            style={[
+              styles.cta,
+              isBest && styles.ctaPrimary,
+              investHovered && styles.ctaHovered,
+              investHovered && isBest && styles.ctaPrimaryHovered,
+            ]}
+            onPress={handleInvestPress}
+            activeOpacity={0.8}
+            {...(isWeb ? {
+              onMouseEnter: () => setInvestHovered(true),
+              onMouseLeave: () => setInvestHovered(false),
+            } : {})}
+          >
+            <Text style={[styles.ctaText, isBest && styles.ctaTextPrimary]}>
+              Investir na {bank.shortName}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
+
+OfferCard.displayName = 'OfferCard';
 
 const styles = StyleSheet.create({
   card: {
@@ -137,11 +167,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.brand[300],
     borderWidth: 1.5,
   },
+  cardHovered: {
+    borderColor: Colors.brand[300],
+    transform: [{ scale: 1.005 }],
+  },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 8,
   },
   bankMeta: {
     flex: 1,
@@ -221,10 +255,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.neutral[50],
     borderWidth: 1,
     borderColor: Colors.neutral[200],
+    overflow: 'visible' as unknown as undefined,
+  },
+  ctaHovered: {
+    boxShadow: '0 0 20px 4px rgba(22, 163, 74, 0.25), 0 0 40px 8px rgba(22, 163, 74, 0.1)' as unknown as undefined,
+    borderColor: Colors.brand[300],
+    transform: [{ scale: 1.01 }],
   },
   ctaPrimary: {
     backgroundColor: Colors.brand[500],
     borderColor: Colors.brand[500],
+  },
+  ctaPrimaryHovered: {
+    backgroundColor: Colors.brand[600],
+    boxShadow: '0 0 24px 6px rgba(22, 163, 74, 0.35), 0 0 48px 12px rgba(22, 163, 74, 0.15)' as unknown as undefined,
   },
   ctaText: {
     fontSize: 15,

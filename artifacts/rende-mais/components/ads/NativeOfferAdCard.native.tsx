@@ -93,74 +93,90 @@ export function NativeOfferAdCard() {
   }
 
   return (
-    <NativeAdView nativeAd={nativeAd} style={styles.card}>
-      <View style={styles.topRow}>
-        <View style={styles.identityRow}>
-          <View style={styles.logoWrap}>
-            {nativeAd.icon?.url ? (
-              <NativeAsset assetType={NativeAssetType.ICON}>
-                <Image source={{ uri: nativeAd.icon.url }} style={styles.logoImage} resizeMode="contain" />
+    <View style={styles.shell}>
+      <Text style={styles.sponsoredLabel}>Patrocinado</Text>
+      <NativeAdView nativeAd={nativeAd} style={styles.card}>
+        <View style={styles.topRow}>
+          <View style={styles.identityRow}>
+            <View style={styles.logoWrap}>
+              {nativeAd.icon?.url ? (
+                <NativeAsset assetType={NativeAssetType.ICON}>
+                  <Image source={{ uri: nativeAd.icon.url }} style={styles.logoImage} resizeMode="contain" />
+                </NativeAsset>
+              ) : (
+                <View style={styles.logoFallback}>
+                  <Text style={styles.logoFallbackText}>AD</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.bankMeta}>
+              <NativeAsset assetType={NativeAssetType.HEADLINE}>
+                <Text numberOfLines={2} style={styles.bankName}>
+                  {nativeAd.headline}
+                </Text>
               </NativeAsset>
-            ) : (
-              <View style={styles.logoFallback}>
-                <Text style={styles.logoFallbackText}>AD</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.bankMeta}>
-            <NativeAsset assetType={NativeAssetType.HEADLINE}>
-              <Text numberOfLines={2} style={styles.bankName}>
-                {nativeAd.headline}
-              </Text>
-            </NativeAsset>
-            <Text style={styles.byline}>Parceiro patrocinado</Text>
+              <Text style={styles.byline}>Parceiro patrocinado</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Patrocinado</Text>
+
+        <View style={styles.rateBlock}>
+          <Text style={styles.rateValue}>Oferta</Text>
+          <Text style={styles.rateUnit}>sugerida</Text>
         </View>
-      </View>
 
-      <View style={styles.rateBlock}>
-        <Text style={styles.rateValue}>Oferta</Text>
-        <Text style={styles.rateUnit}>sugerida</Text>
-      </View>
+        <NativeAsset assetType={NativeAssetType.BODY}>
+          <Text numberOfLines={3} style={styles.body}>
+            {nativeAd.body}
+          </Text>
+        </NativeAsset>
 
-      <NativeAsset assetType={NativeAssetType.BODY}>
-        <Text numberOfLines={3} style={styles.body}>
-          {nativeAd.body}
-        </Text>
-      </NativeAsset>
-
-      <View style={styles.tags}>
-        <View style={styles.tag}>
-          <AppIcon name="shield" size={11} color={Colors.brand[600]} />
-          <Text style={styles.tagText}>Anuncio verificado</Text>
+        <View style={styles.tags}>
+          <View style={styles.tag}>
+            <AppIcon name="shield" size={11} color={Colors.brand[600]} />
+            <Text style={styles.tagText}>Anuncio verificado</Text>
+          </View>
         </View>
-      </View>
 
-      <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
-        <View style={styles.cta}>
-          <Text style={styles.ctaText}>{nativeAd.callToAction || 'Saiba mais'}</Text>
-        </View>
-      </NativeAsset>
-    </NativeAdView>
+        <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+          <View style={styles.cta}>
+            <Text style={styles.ctaText}>{nativeAd.callToAction || 'Saiba mais'}</Text>
+          </View>
+        </NativeAsset>
+      </NativeAdView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: {
+    marginBottom: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.glass.border,
+    backgroundColor: Colors.glass.surface,
+    overflow: 'hidden',
+  },
+  sponsoredLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    color: Colors.neutral[500],
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: 20,
+    borderRadius: 0,
     padding: 20,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: Colors.glass.borderStrong,
+    borderTopWidth: 1,
+    borderTopColor: Colors.glass.border,
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'center',
     marginBottom: 18,
   },
   identityRow: {
@@ -206,21 +222,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
     color: Colors.neutral[500],
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: Colors.neutral[100],
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-    color: Colors.neutral[600],
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   rateBlock: {
     flexDirection: 'row',

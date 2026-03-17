@@ -5,7 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  InteractionManager,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,8 +27,8 @@ import { Badge } from '@/components/ui/Badge';
 import { RiskMeter } from '@/components/RiskMeter';
 import { AffiliateSheet } from '@/components/AffiliateSheet';
 import { useAppData } from '@/providers/AppDataProvider';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { WebContainer } from '@/components/web/WebContainer';
 
 const INVESTMENT_AMOUNTS = [1000, 5000, 10000, 50000];
 
@@ -36,6 +37,8 @@ export default function BancoDetail() {
   const sourceBanks = banks.length > 0 ? banks : BANKS;
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
+  const isWebDesktop = Platform.OS === 'web' && isDesktop;
   const [affiliateVisible, setAffiliateVisible] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(5000);
 
@@ -65,188 +68,193 @@ export default function BancoDetail() {
   const maxRate = Math.max(...bank.rateHistory);
   const minRate = Math.min(...bank.rateHistory);
 
+  const handleOpenAffiliate = () => {
+    setAffiliateVisible(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    InteractionManager.runAfterInteractions(() => {
+      void trackAffiliateClick({
+        bank,
+        sourceScreen: 'bank_detail',
+        sourceComponent: 'bank_detail_invest_button',
+      });
+    });
+  };
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => { Haptics.selectionAsync(); router.back(); }}>
-          <AppIcon name="arrow-left" size={22} color={Colors.neutral[950]} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{bank.shortName}</Text>
-        <View style={{ width: 40 }} />
+      <View style={[styles.header, { paddingTop: isWebDesktop ? 24 : isDesktop ? 16 : insets.top + 10 }]}>
+        <WebContainer>
+          <View style={[styles.headerInner, isWebDesktop && styles.headerInnerDesktop]}>
+            <View style={[styles.headerLeft, isWebDesktop && styles.headerLeftDesktop]}>
+              <TouchableOpacity style={styles.backButton} onPress={() => { Haptics.selectionAsync(); router.back(); }}>
+                <AppIcon name="arrow-left" size={22} color={Colors.neutral[950]} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>{bank.shortName}</Text>
+            </View>
+            <TouchableOpacity style={[styles.headerInvestButton, isWebDesktop && styles.headerInvestButtonDesktop]} onPress={handleOpenAffiliate} activeOpacity={0.85}>
+              <Text style={styles.headerInvestText}>Abrir conta</Text>
+              <AppIcon name="external-link" size={14} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        </WebContainer>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: isDesktop ? 48 : insets.bottom + 28 }}
       >
-        <View style={styles.heroCard}>
-          <View style={styles.heroTop}>
-            <BankLogo bank={bank} size={56} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.heroName}>{bank.name}</Text>
-              <Text style={styles.heroType}>{INVESTMENT_LABELS[bank.investmentType]}</Text>
-            </View>
-          </View>
-
-          <View style={styles.heroRate}>
-            <Text style={styles.heroRateValue}>{bank.cdiRate.toFixed(1)}%</Text>
-            <Text style={styles.heroRateLabel}>ao ano · {bank.cdiRate.toFixed(1)}% do CDI (rentabilidade de referência do mercado)</Text>
-          </View>
-
-          <View style={styles.heroPills}>
-            <LiquidityPill type={bank.liquidity} />
-            {bank.fgcCovered && <Badge label="Dinheiro protegido pelo governo até R$ 250 mil" variant="fgc" size="sm" />}
-            {!bank.hasTax && <Badge label="Sem imposto de renda" variant="brand" size="sm" />}
-          </View>
-
-          {bank.minimumAmount > 0 && (
-            <Text style={styles.minimum}>
-              Mínimo para começar: {formatCurrency(bank.minimumAmount)}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Simular rendimento</Text>
-          <View style={styles.simulatorCard}>
-            <Text style={styles.simLabel}>Com quanto?</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.amountRow}>
-                {INVESTMENT_AMOUNTS.map((amt) => (
-                  <TouchableOpacity
-                    key={amt}
-                    style={[styles.amountPill, selectedAmount === amt && styles.amountPillActive]}
-                    onPress={() => { Haptics.selectionAsync(); setSelectedAmount(amt); }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.amountText, selectedAmount === amt && styles.amountTextActive]}>
-                      {formatCurrency(amt)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.projectionBox}>
-              <View style={styles.projectionItem}>
-                <Text style={styles.projLabel}>Em 12 meses</Text>
-                <Text style={styles.projValue}>{formatCurrency(net)}</Text>
-                <Text style={styles.projSub}>lucro líquido</Text>
-              </View>
-              <View style={styles.projDivider} />
-              <View style={styles.projectionItem}>
-                <Text style={styles.projLabel}>Por mês</Text>
-                <Text style={styles.projValue}>≈ {formatCurrency(monthly)}</Text>
-                <Text style={styles.projSub}>rendimento mensal</Text>
+        <WebContainer>
+          <View style={styles.heroCard}>
+            <View style={styles.heroTop}>
+              <BankLogo bank={bank} size={56} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.heroName}>{bank.name}</Text>
+                <Text style={styles.heroType}>{INVESTMENT_LABELS[bank.investmentType]}</Text>
               </View>
             </View>
 
-            {gainVsSavings > 0 && (
-              <View style={styles.vsSavingsBox}>
-                <AppIcon name="trending-up" size={16} color={Colors.brand[500]} />
-                <Text style={styles.vsSavingsText}>
-                  Comparado à poupança, você ganha {formatCurrency(gainVsSavings)} a mais em 12 meses
-                </Text>
-              </View>
+            <View style={styles.heroRate}>
+              <Text style={styles.heroRateValue}>{bank.cdiRate.toFixed(1)}%</Text>
+              <Text style={styles.heroRateLabel}>ao ano · {bank.cdiRate.toFixed(1)}% do CDI (rentabilidade de referência do mercado)</Text>
+            </View>
+
+            <View style={styles.heroPills}>
+              <LiquidityPill type={bank.liquidity} />
+              {bank.fgcCovered && <Badge label="Dinheiro protegido pelo governo até R$ 250 mil" variant="fgc" size="sm" />}
+              {!bank.hasTax && <Badge label="Sem imposto de renda" variant="brand" size="sm" />}
+            </View>
+
+            {bank.minimumAmount > 0 && (
+              <Text style={styles.minimum}>
+                Mínimo para começar: {formatCurrency(bank.minimumAmount)}
+              </Text>
             )}
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Histórico da taxa (6 meses)</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.chartContainer}>
-              {bank.rateHistory.map((rate, index) => {
-                const barHeight = ((rate - minRate + 2) / (maxRate - minRate + 4)) * 80;
-                const isLast = index === bank.rateHistory.length - 1;
-                return (
-                  <View key={index} style={styles.barWrapper}>
-                    <Text style={[styles.barValue, isLast && { color: Colors.brand[500] }]}>
-                      {rate.toFixed(0)}
-                    </Text>
-                    <View
-                      style={[
-                        styles.bar,
-                        { height: barHeight, backgroundColor: isLast ? Colors.brand[500] : Colors.brand[200] },
-                      ]}
-                    />
-                    <Text style={styles.barMonth}>
-                      {['Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'][index]}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-            <Text style={styles.chartCaption}>Como a taxa variou nos últimos 6 meses</Text>
-          </View>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Simular rendimento</Text>
+            <View style={styles.simulatorCard}>
+              <Text style={styles.simLabel}>Com quanto?</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.amountRow}>
+                  {INVESTMENT_AMOUNTS.map((amt) => (
+                    <TouchableOpacity
+                      key={amt}
+                      style={[styles.amountPill, selectedAmount === amt && styles.amountPillActive]}
+                      onPress={() => { Haptics.selectionAsync(); setSelectedAmount(amt); }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.amountText, selectedAmount === amt && styles.amountTextActive]}>
+                        {formatCurrency(amt)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>O que você precisa saber</Text>
-          <View style={styles.detailsCard}>
-            <View style={styles.detailRow}>
-              <AppIcon name="shield" size={16} color={Colors.fgc.badge} />
-              <Text style={styles.detailText}>
-                {bank.fgcCovered
-                  ? 'Dinheiro protegido pelo governo até R$ 250 mil'
-                  : 'Não coberto pelo FGC — verifique antes de investir'}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <AppIcon name="file-text" size={16} color={Colors.neutral[400]} />
-              <Text style={styles.detailText}>
-                {bank.hasTax ? 'Paga imposto de renda (IR regressivo)' : 'Livre de imposto de renda'}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <AppIcon name="clock" size={16} color={Colors.neutral[400]} />
-              <Text style={styles.detailText}>{LIQUIDITY_LABELS[bank.liquidity].label}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <AppIcon name="dollar-sign" size={16} color={Colors.neutral[400]} />
-              <Text style={styles.detailText}>
-                {bank.minimumAmount === 0
-                  ? 'Sem valor mínimo para investir'
-                  : `Mínimo para começar: ${formatCurrency(bank.minimumAmount)}`}
-              </Text>
+              <View style={styles.projectionBox}>
+                <View style={styles.projectionItem}>
+                  <Text style={styles.projLabel}>Em 12 meses</Text>
+                  <Text style={styles.projValue}>{formatCurrency(net)}</Text>
+                  <Text style={styles.projSub}>lucro líquido</Text>
+                </View>
+                <View style={styles.projDivider} />
+                <View style={styles.projectionItem}>
+                  <Text style={styles.projLabel}>Por mês</Text>
+                  <Text style={styles.projValue}>≈ {formatCurrency(monthly)}</Text>
+                  <Text style={styles.projSub}>rendimento mensal</Text>
+                </View>
+              </View>
+
+              {gainVsSavings > 0 && (
+                <View style={styles.vsSavingsBox}>
+                  <AppIcon name="trending-up" size={16} color={Colors.brand[500]} />
+                  <Text style={styles.vsSavingsText}>
+                    Comparado à poupança, você ganha {formatCurrency(gainVsSavings)} a mais em 12 meses
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Segurança do banco</Text>
-          <View style={styles.riskCard}>
-            <RiskMeter score={bank.riskScore} level={bank.riskLevel} />
-            <Text style={styles.riskDesc}>{bank.description}</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Histórico da taxa (6 meses)</Text>
+            <View style={styles.chartCard}>
+              <View style={styles.chartContainer}>
+                {bank.rateHistory.map((rate, index) => {
+                  const barHeight = ((rate - minRate + 2) / (maxRate - minRate + 4)) * 80;
+                  const isLast = index === bank.rateHistory.length - 1;
+                  return (
+                    <View key={index} style={styles.barWrapper}>
+                      <Text style={[styles.barValue, isLast && { color: Colors.brand[500] }]}>
+                        {rate.toFixed(0)}
+                      </Text>
+                      <View
+                        style={[
+                          styles.bar,
+                          { height: barHeight, backgroundColor: isLast ? Colors.brand[500] : Colors.brand[200] },
+                        ]}
+                      />
+                      <Text style={styles.barMonth}>
+                        {['Out', 'Nov', 'Dez', 'Jan', 'Fev', 'Mar'][index]}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <Text style={styles.chartCaption}>Como a taxa variou nos últimos 6 meses</Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.redirectNote}>
-            Você vai ser redirecionado para o site do banco.
-          </Text>
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>O que você precisa saber</Text>
+            <View style={styles.detailsCard}>
+              <View style={styles.detailRow}>
+                <AppIcon name="shield" size={16} color={Colors.fgc.badge} />
+                <Text style={styles.detailText}>
+                  {bank.fgcCovered
+                    ? 'Dinheiro protegido pelo governo até R$ 250 mil'
+                    : 'Não coberto pelo FGC — verifique antes de investir'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <AppIcon name="file-text" size={16} color={Colors.neutral[400]} />
+                <Text style={styles.detailText}>
+                  {bank.hasTax ? 'Paga imposto de renda (IR regressivo)' : 'Livre de imposto de renda'}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <AppIcon name="clock" size={16} color={Colors.neutral[400]} />
+                <Text style={styles.detailText}>{LIQUIDITY_LABELS[bank.liquidity].label}</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <AppIcon name="dollar-sign" size={16} color={Colors.neutral[400]} />
+                <Text style={styles.detailText}>
+                  {bank.minimumAmount === 0
+                    ? 'Sem valor mínimo para investir'
+                    : `Mínimo para começar: ${formatCurrency(bank.minimumAmount)}`}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Segurança do banco</Text>
+            <View style={styles.riskCard}>
+              <RiskMeter score={bank.riskScore} level={bank.riskLevel} />
+              <Text style={styles.riskDesc}>{bank.description}</Text>
+            </View>
+          </View>
+
+          {!isDesktop && (
+            <View style={styles.section}>
+              <Text style={styles.redirectNote}>
+                Você vai ser redirecionado para o site do banco.
+              </Text>
+            </View>
+          )}
+        </WebContainer>
       </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={styles.investButton}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            void trackAffiliateClick({
-              bank,
-              sourceScreen: 'bank_detail',
-              sourceComponent: 'bank_detail_invest_button',
-            });
-            setAffiliateVisible(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.investButtonText}>Abrir conta na {bank.shortName}</Text>
-          <AppIcon name="external-link" size={18} color={Colors.white} />
-        </TouchableOpacity>
-      </View>
-
       <AffiliateSheet
         bank={bank}
         visible={affiliateVisible}
@@ -263,18 +271,35 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 14,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[100],
   },
+  headerInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  headerInnerDesktop: {
+    position: 'relative',
+    minHeight: 38,
+    alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  headerLeftDesktop: {
+    paddingRight: 152,
+  },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -282,6 +307,30 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: 'Inter_600SemiBold',
     color: Colors.neutral[950],
+    flexShrink: 1,
+  },
+  headerInvestButton: {
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.brand[500],
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  headerInvestButtonDesktop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    height: 38,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+  },
+  headerInvestText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
   },
   heroCard: {
     backgroundColor: Colors.surface,
@@ -501,28 +550,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.neutral[500],
     textAlign: 'center',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.neutral[100],
-  },
-  investButton: {
-    backgroundColor: Colors.brand[500],
-    borderRadius: 14,
-    height: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    ...shadows.level2,
-  },
-  investButtonText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
   },
   notFound: {
     flex: 1,

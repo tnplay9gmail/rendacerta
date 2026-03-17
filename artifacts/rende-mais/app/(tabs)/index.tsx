@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   Animated,
   RefreshControl,
   TouchableOpacity,
+  InteractionManager,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -19,8 +21,11 @@ import { AffiliateSheet } from '@/components/AffiliateSheet';
 import { BannerAdSlot } from '@/components/ads/BannerAdSlot';
 import { NativeOfferAdCard } from '@/components/ads/NativeOfferAdCard';
 import { FilterSheet, FilterState, DEFAULT_FILTERS } from '@/components/FilterSheet';
+import { ScreenFadeTransition } from '@/components/ui/ScreenFadeTransition';
 import { useAppData } from '@/providers/AppDataProvider';
 import { shouldInjectNativeAd, shouldShowHomeBanner } from '@/services/adMonetization';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { WebContainer } from '@/components/web/WebContainer';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -65,11 +70,15 @@ function applyFilters(banks: Bank[], f: FilterState): Bank[] {
 export default function HomeScreen() {
   const { banks, currentCdiRate, adsConfig, refreshCatalog, isCatalogLoading, trackAffiliateClick } = useAppData();
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
+  const isWeb = Platform.OS === 'web';
+  const isWebDesktop = isWeb && isDesktop;
   const [refreshing, setRefreshing] = useState(false);
   const [affiliateBank, setAffiliateBank] = useState<Bank | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [bankQuery, setBankQuery] = useState('');
+  const [filterBtnHovered, setFilterBtnHovered] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -85,14 +94,18 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
-  const normalizedQuery = normalizeText(bankQuery);
-  const filteredBanks = applyFilters(banks, filters).filter((bank) => {
-    if (!normalizedQuery) return true;
-    const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
-    return haystack.includes(normalizedQuery);
-  });
-  const activeCount = countActiveFilters(filters);
-  const showBannerSlot = shouldShowHomeBanner(adsConfig);
+  const normalizedQuery = useMemo(() => normalizeText(bankQuery), [bankQuery]);
+  const filteredBanks = useMemo(
+    () =>
+      applyFilters(banks, filters).filter((bank) => {
+        if (!normalizedQuery) return true;
+        const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
+        return haystack.includes(normalizedQuery);
+      }),
+    [banks, filters, normalizedQuery],
+  );
+  const activeCount = useMemo(() => countActiveFilters(filters), [filters]);
+  const showBannerSlot = useMemo(() => shouldShowHomeBanner(adsConfig), [adsConfig]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -103,21 +116,24 @@ export default function HomeScreen() {
       .finally(() => setRefreshing(false));
   }, [refreshCatalog]);
 
-  const handleApplyFilters = (f: FilterState) => {
+  const handleApplyFilters = useCallback((f: FilterState) => {
     setFilters(f);
     setFilterOpen(false);
-  };
+  }, []);
 
-  const handleInvestPress = (bank: Bank) => {
-    void trackAffiliateClick({
-      bank,
-      sourceScreen: 'home',
-      sourceComponent: 'offer_card_invest_button',
-    });
+  const handleInvestPress = useCallback((bank: Bank) => {
     setAffiliateBank(bank);
-  };
+    InteractionManager.runAfterInteractions(() => {
+      void trackAffiliateClick({
+        bank,
+        sourceScreen: 'home',
+        sourceComponent: 'offer_card_invest_button',
+      });
+    });
+  }, [trackAffiliateClick]);
 
   return (
+    <ScreenFadeTransition>
     <View style={styles.container}>
       {/* Animated sticky header */}
       <Animated.View
@@ -149,10 +165,11 @@ export default function HomeScreen() {
             tintColor={Colors.brand[500]}
           />
         }
-        contentContainerStyle={{ paddingBottom: showBannerSlot ? 210 : 110 }}
+        contentContainerStyle={{ paddingBottom: showBannerSlot ? insets.bottom + 220 : isDesktop ? 40 : insets.bottom + 110 }}
       >
         {/* Hero header */}
-        <View style={[styles.hero, { paddingTop: insets.top + 20 }]}>
+        <View style={[styles.hero, { paddingTop: isDesktop ? 32 : insets.top + 20 }]}>
+          <WebContainer>
           <View style={styles.heroTop}>
             <View style={styles.heroTextWrap}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
@@ -175,11 +192,74 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Filter button */}
+            {/* Filter button — only shown here on mobile */}
+            {!isDesktop && (
+              <TouchableOpacity
+                style={[styles.filterBtn, activeCount > 0 && styles.filterBtnActive]}
+                onPress={() => setFilterOpen(true)}
+                activeOpacity={0.8}
+              >
+                <AppIcon
+                  name="sliders"
+                  size={16}
+                  color={activeCount > 0 ? Colors.white : Colors.neutral[800]}
+                  weight={activeCount > 0 ? 'fill' : 'regular'}
+                />
+                <Text style={[styles.filterText, activeCount > 0 && styles.filterTextActive]}>
+                  Filtrar
+                </Text>
+                {activeCount > 0 && (
+                  <View style={styles.filterBadge}>
+                    <Text style={styles.filterBadgeText}>{activeCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+          </WebContainer>
+        </View>
+
+        <WebContainer>
+        {/* Search + filter row */}
+        <View style={[styles.searchRow, isWebDesktop && styles.searchRowDesktop]}>
+          <View style={[styles.searchWrap, activeCount > 0 && styles.searchWrapWithActiveFilters, isWebDesktop && styles.searchWrapDesktop]}>
+            <AppIcon name="search" size={16} color={Colors.neutral[400]} />
+            <TextInput
+              style={styles.searchInput}
+              value={bankQuery}
+              onChangeText={setBankQuery}
+              placeholder="Buscar banco pelo nome"
+              placeholderTextColor={Colors.neutral[300]}
+              returnKeyType="search"
+            />
+            {bankQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setBankQuery('')}
+                style={styles.searchClear}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <AppIcon name="x" size={14} color={Colors.neutral[400]} />
+              </TouchableOpacity>
+            )}
+          </View>
+          {/* Filtrar button — on desktop, lives next to search bar */}
+          {isWebDesktop && (
             <TouchableOpacity
-              style={[styles.filterBtn, activeCount > 0 && styles.filterBtnActive]}
+              style={[
+                styles.filterBtn,
+                styles.filterBtnDesktop,
+                activeCount > 0 && styles.filterBtnActive,
+                filterBtnHovered && styles.filterBtnHover,
+                filterBtnHovered && activeCount > 0 && styles.filterBtnActiveHover,
+              ]}
               onPress={() => setFilterOpen(true)}
               activeOpacity={0.8}
+              {...(isWebDesktop
+                ? {
+                    onMouseEnter: () => setFilterBtnHovered(true),
+                    onMouseLeave: () => setFilterBtnHovered(false),
+                  }
+                : {})}
             >
               <AppIcon
                 name="sliders"
@@ -195,28 +275,6 @@ export default function HomeScreen() {
                   <Text style={styles.filterBadgeText}>{activeCount}</Text>
                 </View>
               )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Bank search */}
-        <View style={styles.searchWrap}>
-          <AppIcon name="search" size={16} color={Colors.neutral[400]} />
-          <TextInput
-            style={styles.searchInput}
-            value={bankQuery}
-            onChangeText={setBankQuery}
-            placeholder="Buscar banco pelo nome"
-            placeholderTextColor={Colors.neutral[300]}
-            returnKeyType="search"
-          />
-          {bankQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setBankQuery('')}
-              style={styles.searchClear}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <AppIcon name="x" size={14} color={Colors.neutral[400]} />
             </TouchableOpacity>
           )}
         </View>
@@ -264,17 +322,17 @@ export default function HomeScreen() {
         )}
 
         {/* Count */}
-        <View style={styles.listHeader}>
+        <View style={[styles.listHeader, isWebDesktop && styles.listHeaderDesktop]}>
           <Text style={styles.listCount}>
             {filteredBanks.length} {filteredBanks.length === 1 ? 'opção encontrada' : 'opções encontradas'}
           </Text>
           {activeCount === 0 && (
-            <Text style={styles.listSub}>ordenado por maior taxa</Text>
+            <Text style={[styles.listSub, isWebDesktop && styles.listSubDesktop]}>ordenado por maior taxa</Text>
           )}
         </View>
 
         {/* Cards */}
-        <View style={styles.cards}>
+        <View style={[styles.cards, isDesktop && styles.cardsGrid]}>
           {isCatalogLoading && filteredBanks.length === 0 ? (
             <>
               <SkeletonCard />
@@ -283,14 +341,16 @@ export default function HomeScreen() {
           ) : filteredBanks.length > 0 ? (
             filteredBanks.map((bank, index) => (
               <React.Fragment key={bank.id}>
-                <OfferCard
-                  bank={bank}
-                  index={index}
-                  isBest={index === 0}
-                  currentCdiRate={currentCdiRate}
-                  onInvestPress={handleInvestPress}
-                />
-                {shouldInjectNativeAd(index + 1, adsConfig) ? <NativeOfferAdCard /> : null}
+                <View style={isDesktop ? styles.cardGridItem : undefined}>
+                  <OfferCard
+                    bank={bank}
+                    index={index}
+                    isBest={index === 0}
+                    currentCdiRate={currentCdiRate}
+                    onInvestPress={handleInvestPress}
+                  />
+                </View>
+                {!isDesktop && shouldInjectNativeAd(index + 1, adsConfig) ? <NativeOfferAdCard /> : null}
               </React.Fragment>
             ))
           ) : (
@@ -303,6 +363,7 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+        </WebContainer>
       </Animated.ScrollView>
 
       <AffiliateSheet
@@ -319,6 +380,7 @@ export default function HomeScreen() {
         onClose={() => setFilterOpen(false)}
       />
     </View>
+    </ScreenFadeTransition>
   );
 }
 
@@ -386,6 +448,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.neutral[200],
     justifyContent: 'center',
     position: 'relative',
+  },
+  filterBtnDesktop: {
+    height: 46,
+    paddingHorizontal: 16,
+    minWidth: 118,
+    transitionDuration: '160ms' as unknown as undefined,
+    transitionProperty: 'background-color, border-color, box-shadow, transform' as unknown as undefined,
+    transitionTimingFunction: 'ease' as unknown as undefined,
+  },
+  filterBtnHover: {
+    borderColor: Colors.brand[300],
+    backgroundColor: Colors.brand[50],
+    boxShadow: '0 6px 16px rgba(22,163,74,0.12)' as unknown as undefined,
+    transform: [{ translateY: -1 }],
+  },
+  filterBtnActiveHover: {
+    backgroundColor: Colors.brand[600],
+    borderColor: Colors.brand[600],
+    boxShadow: '0 8px 20px rgba(22,163,74,0.2)' as unknown as undefined,
   },
   filterBtnActive: {
     backgroundColor: Colors.brand[500],
@@ -464,13 +545,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    height: 46,
+    paddingVertical: 0,
+  },
+  searchWrapWithActiveFilters: {
+    marginBottom: 8,
+  },
+  searchWrapDesktop: {
+    marginTop: 0,
+    marginHorizontal: 0,
+    marginBottom: 0,
+    flex: 1,
+    minWidth: 0,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
     color: Colors.neutral[900],
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
   searchClear: {
     width: 24,
@@ -486,6 +580,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[100],
+    paddingTop: 2,
   },
   activeFiltersScroll: {
     paddingHorizontal: 20,
@@ -530,6 +625,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  listHeaderDesktop: {
+    paddingHorizontal: 0,
+    alignItems: 'flex-end',
+  },
   listCount: {
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
@@ -542,11 +641,39 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     color: Colors.neutral[400],
   },
+  listSubDesktop: {
+    textAlign: 'right',
+    marginLeft: 10,
+    marginRight: 8,
+    marginBottom: 1,
+  },
+
+  // Search row (desktop: search + filtrar side by side)
+  searchRow: {},
+  searchRowDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 2,
+  },
 
   // Cards
   cards: {
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  cardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    paddingHorizontal: 0,
+    alignItems: 'stretch',
+  },
+  cardGridItem: {
+    width: '31.33%' as unknown as number,
+    minWidth: 260,
+    display: 'flex' as unknown as undefined,
   },
   emptyState: {
     alignItems: 'center',

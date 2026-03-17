@@ -11,14 +11,18 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/ui/AppIcon';
+import { ScreenFadeTransition } from '@/components/ui/ScreenFadeTransition';
 import * as Haptics from 'expo-haptics';
 import { Colors, shadows } from '@/constants/colors';
 import {
   BANKS,
   formatCurrency,
+  CURRENT_SAVINGS_RATE,
 } from '@/constants/data';
 import { BankLogo } from '@/components/BankLogo';
 import { useAppData } from '@/providers/AppDataProvider';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { WebContainer } from '@/components/web/WebContainer';
 
 function formatInput(raw: string): string {
   const nums = raw.replace(/\D/g, '');
@@ -82,17 +86,19 @@ function calculateSavingsReturnWithMonthly(
   monthlyContribution: number,
   months: number
 ): number {
-  const monthlyRate = 0.005;
+  const annualRate = CURRENT_SAVINGS_RATE / 100;
+  const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
   const factor = Math.pow(1 + monthlyRate, months);
   const totalFromPrincipal = principal * factor;
   const totalFromMonthly = monthlyContribution > 0
-    ? monthlyContribution * ((factor - 1) / monthlyRate)
+    ? monthlyRate === 0
+      ? monthlyContribution * months
+      : monthlyContribution * ((factor - 1) / monthlyRate)
     : 0;
 
   const invested = principal + monthlyContribution * months;
   return totalFromPrincipal + totalFromMonthly - invested;
 }
-
 
 const PERIODS = [
   { label: '3 meses', months: 3 },
@@ -103,8 +109,9 @@ const PERIODS = [
 
 export default function CalcularScreen() {
   const { banks, currentCdiRate } = useAppData();
-  const sourceBanks = banks.length > 0 ? banks : BANKS;
+  const sourceBanks = useMemo(() => (banks.length > 0 ? banks : BANKS), [banks]);
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
   const [inputValue, setInputValue] = useState('');
   const [monthlyContribution, setMonthlyContribution] = useState('');
   const [selectedMonths, setSelectedMonths] = useState(12);
@@ -132,13 +139,20 @@ export default function CalcularScreen() {
   const amount = parseValue(inputValue);
   const monthlyAmount = parseValue(monthlyContribution);
   const canSimulate = (amount > 0 || monthlyAmount > 0) && effectiveMonths > 0;
-  const normalizedQuery = normalizeText(bankQuery);
-  const filteredBanks = sourceBanks.filter((bank) => {
-    if (!normalizedQuery) return true;
-    const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
-    return haystack.includes(normalizedQuery);
-  });
-  const selectedBank = sourceBanks.find((b) => b.id === selectedBankId) ?? sourceBanks[0];
+  const normalizedQuery = useMemo(() => normalizeText(bankQuery), [bankQuery]);
+  const filteredBanks = useMemo(
+    () =>
+      sourceBanks.filter((bank) => {
+        if (!normalizedQuery) return true;
+        const haystack = normalizeText(`${bank.name} ${bank.shortName}`);
+        return haystack.includes(normalizedQuery);
+      }),
+    [sourceBanks, normalizedQuery],
+  );
+  const selectedBank = useMemo(
+    () => sourceBanks.find((bank) => bank.id === selectedBankId) ?? sourceBanks[0],
+    [sourceBanks, selectedBankId],
+  );
 
   const result = useMemo(() => {
     if (!canSimulate) return null;
@@ -166,6 +180,7 @@ export default function CalcularScreen() {
   };
 
   return (
+    <ScreenFadeTransition>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -176,11 +191,15 @@ export default function CalcularScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-          <Text style={styles.title}>Calculadora</Text>
-          <Text style={styles.subtitle}>Simule quanto você vai ganhar</Text>
+        {/* Header — full width */}
+        <View style={[styles.header, { paddingTop: isDesktop ? 32 : insets.top + 20 }]}>
+          <WebContainer style={{ paddingHorizontal: 20 }}>
+            <Text style={styles.title}>Calculadora</Text>
+            <Text style={styles.subtitle}>Simule quanto você vai ganhar</Text>
+          </WebContainer>
         </View>
+
+        <WebContainer>
 
         {/* Amount input */}
         <View style={styles.section}>
@@ -286,26 +305,24 @@ export default function CalcularScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.bankRow}>
-              {filteredBanks.map((bank) => (
-                <TouchableOpacity
-                  key={bank.id}
-                  style={[styles.bankOption, selectedBankId === bank.id && styles.bankOptionSelected]}
-                  onPress={() => { Haptics.selectionAsync(); setSelectedBankId(bank.id); }}
-                  activeOpacity={0.8}
-                >
-                  <BankLogo bank={bank} size={32} />
-                  <Text style={[styles.bankName, selectedBankId === bank.id && styles.bankNameSelected]}>
-                    {bank.shortName}
-                  </Text>
-                  <Text style={[styles.bankRate, selectedBankId === bank.id && styles.bankRateSelected]}>
-                    {bank.cdiRate.toFixed(1)}%
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          <View style={[styles.bankRow, { flexWrap: 'wrap' }, isDesktop && styles.bankRowDesktop]}>
+            {filteredBanks.map((bank) => (
+              <TouchableOpacity
+                key={bank.id}
+                style={[styles.bankOption, isDesktop && styles.bankOptionDesktop, selectedBankId === bank.id && styles.bankOptionSelected]}
+                onPress={() => { Haptics.selectionAsync(); setSelectedBankId(bank.id); }}
+                activeOpacity={0.8}
+              >
+                <BankLogo bank={bank} size={isDesktop ? 22 : 32} />
+                <Text style={[styles.bankName, selectedBankId === bank.id && styles.bankNameSelected]}>
+                  {bank.shortName}
+                </Text>
+                <Text style={[styles.bankRate, selectedBankId === bank.id && styles.bankRateSelected]}>
+                  {bank.cdiRate.toFixed(1)}%
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Result */}
@@ -368,8 +385,10 @@ export default function CalcularScreen() {
             </Text>
           </View>
         )}
+        </WebContainer>
       </ScrollView>
     </KeyboardAvoidingView>
+    </ScreenFadeTransition>
   );
 }
 
@@ -462,7 +481,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 10,
+    marginBottom: 14,
   },
   searchInput: {
     flex: 1,
@@ -490,6 +509,17 @@ const styles = StyleSheet.create({
     minWidth: 76,
   },
   bankOptionSelected: { borderColor: Colors.brand[500], backgroundColor: Colors.brand[50] },
+  bankOptionDesktop: {
+    flexDirection: 'row',
+    padding: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    minWidth: 0,
+    gap: 6,
+  },
+  bankRowDesktop: {
+    gap: 8,
+  },
   bankName: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[600] },
   bankNameSelected: { color: Colors.brand[600] },
   bankRate: { fontSize: 13, fontFamily: 'Inter_700Bold', color: Colors.neutral[500] },

@@ -550,6 +550,8 @@ export const BANKS: Bank[] = [
 ];
 
 export const CURRENT_CDI_RATE = 14.90;
+export const CURRENT_SAVINGS_RATE = 8.26;
+export const CURRENT_IPCA_RATE = 4.26;
 
 export function calculateReturnWithBaseCdi(
   principal: number,
@@ -587,8 +589,9 @@ export function calculateReturn(
 }
 
 export function calculateSavingsReturn(principal: number, months: number): number {
-  const savingsRate = 0.005;
-  return principal * Math.pow(1 + savingsRate, months) - principal;
+  const annualRate = CURRENT_SAVINGS_RATE / 100;
+  const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+  return principal * Math.pow(1 + monthlyRate, months) - principal;
 }
 
 export function getRiskColor(level: RiskLevel): string {

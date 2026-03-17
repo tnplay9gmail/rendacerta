@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Animated,
   Linking,
   Dimensions,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { AppIcon } from '@/components/ui/AppIcon';
@@ -15,6 +16,7 @@ import { Bank } from '@/constants/data';
 import { Colors, shadows } from '@/constants/colors';
 import { BankLogo } from './BankLogo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 interface AffiliateSheetProps {
   bank: Bank | null;
@@ -26,23 +28,54 @@ interface AffiliateSheetProps {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export function AffiliateSheet({ bank, visible, sourceScreen: _sourceScreen, onClose }: AffiliateSheetProps) {
-  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const scale = useRef(new Animated.Value(0.94)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
+  const isWebDesktop = Platform.OS === 'web' && isDesktop;
+  const [continueHovered, setContinueHovered] = useState(false);
+  const [cancelHovered, setCancelHovered] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (visible) {
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 250,
-      }).start();
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scale, {
+          toValue: 1,
+          useNativeDriver: true,
+          damping: 20,
+          stiffness: 260,
+          mass: 0.75,
+        }),
+      ]).start();
     } else {
-      Animated.timing(translateY, {
-        toValue: SCREEN_HEIGHT,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardOpacity, {
+          toValue: 0,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 0.96,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [visible]);
 
@@ -59,12 +92,18 @@ export function AffiliateSheet({ bank, visible, sourceScreen: _sourceScreen, onC
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.overlay}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
         <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} />
         <Animated.View
-          style={[styles.sheet, { paddingBottom: insets.bottom + 16, transform: [{ translateY }] }]}
+          style={[
+            styles.modalCard,
+            {
+              maxHeight: SCREEN_HEIGHT - insets.top - insets.bottom - 36,
+              opacity: cardOpacity,
+              transform: [{ scale }],
+            },
+          ]}
         >
-          <View style={styles.handle} />
-
           <View style={styles.bankRow}>
             <BankLogo bank={bank} size={48} />
             <View style={{ flex: 1 }}>
@@ -82,12 +121,31 @@ export function AffiliateSheet({ bank, visible, sourceScreen: _sourceScreen, onC
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.continueButton, continueHovered && isWebDesktop && styles.continueButtonHover]}
+            onPress={handleContinue}
+            activeOpacity={0.85}
+            {...(isWebDesktop
+              ? {
+                  onMouseEnter: () => setContinueHovered(true),
+                  onMouseLeave: () => setContinueHovered(false),
+                }
+              : {})}
+          >
             <Text style={styles.continueText}>Continuar</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Cancelar</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.cancelButton, cancelHovered && isWebDesktop && styles.cancelButtonHover]}
+            {...(isWebDesktop
+              ? {
+                  onMouseEnter: () => setCancelHovered(true),
+                  onMouseLeave: () => setCancelHovered(false),
+                }
+              : {})}
+          >
+            <Text style={[styles.cancelText, cancelHovered && isWebDesktop && styles.cancelTextHover]}>Cancelar</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -98,24 +156,22 @@ export function AffiliateSheet({ bank, visible, sourceScreen: _sourceScreen, onC
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
-  sheet: {
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.48)',
+  },
+  modalCard: {
     backgroundColor: Colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    width: '100%' as unknown as number,
+    maxWidth: 460,
+    borderRadius: 20,
     padding: 20,
-    paddingTop: 12,
+    paddingTop: 20,
     ...shadows.level3,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    backgroundColor: Colors.neutral[300],
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
   },
   bankRow: {
     flexDirection: 'row',
@@ -155,6 +211,14 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
+    transitionDuration: '160ms' as unknown as undefined,
+    transitionProperty: 'background-color, border-color, box-shadow, transform' as unknown as undefined,
+    transitionTimingFunction: 'ease' as unknown as undefined,
+  },
+  continueButtonHover: {
+    backgroundColor: Colors.brand[600],
+    boxShadow: '0 8px 22px rgba(22,163,74,0.24)' as unknown as undefined,
+    transform: [{ translateY: -1 }],
   },
   continueText: {
     color: Colors.white,
@@ -164,10 +228,20 @@ const styles = StyleSheet.create({
   cancelButton: {
     alignItems: 'center',
     paddingVertical: 14,
+    borderRadius: 10,
+    transitionDuration: '160ms' as unknown as undefined,
+    transitionProperty: 'background-color, color' as unknown as undefined,
+    transitionTimingFunction: 'ease' as unknown as undefined,
+  },
+  cancelButtonHover: {
+    backgroundColor: Colors.neutral[50],
   },
   cancelText: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: 'Inter_500Medium',
     color: Colors.neutral[500],
+  },
+  cancelTextHover: {
+    color: Colors.neutral[700],
   },
 });

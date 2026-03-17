@@ -25,6 +25,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: Colors.neutral[100],
     alignSelf: 'flex-start',
+    flexShrink: 0,
   },
   pillGood: {
     backgroundColor: Colors.brand[50],

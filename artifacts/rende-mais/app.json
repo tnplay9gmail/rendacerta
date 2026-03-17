@@ -4,29 +4,35 @@
     "slug": "rende-mais",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo1greenbg.png",
     "scheme": "rende-mais",
     "userInterfaceStyle": "dark",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/logo1greenbg.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#09090B"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rendemais.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.rendemais.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logoappforeground.png",
+        "backgroundColor": "#16a34a"
+      }
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/logo1greenbg.png"
+    },
+    "react-native-google-mobile-ads": {
+      "android_app_id": "ca-app-pub-3776982600781310~1770021128"
     },
     "plugins": [
-      [
-        "expo-router",
-        {
-          "origin": "https://replit.com/"
-        }
-      ],
+      "expo-router",
       "expo-font",
       "expo-web-browser",
       "react-native-google-mobile-ads"
@@ -34,6 +40,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9ac23cf9-5947-4d08-90eb-caafc753713f"
+      }
     }
   }
 }

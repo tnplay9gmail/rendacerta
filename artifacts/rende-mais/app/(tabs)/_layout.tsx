@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/ui/AppIcon';
 import { Colors } from '@/constants/colors';
+import { WebNavbar } from '@/components/web/WebNavbar';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const isIOS = Platform.OS === 'ios';
 const isWeb = Platform.OS === 'web';
@@ -74,18 +76,24 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsiveLayout();
   const SymbolView = getSymbolView();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        lazy: true,
+        freezeOnBlur: true,
         tabBarActiveTintColor: Colors.brand[500],
         tabBarInactiveTintColor: Colors.neutral[500],
         tabBarLabelStyle: {
           fontSize: 12,
           fontFamily: 'Inter_600SemiBold',
           letterSpacing: 0.2,
+        },
+        sceneStyle: {
+          backgroundColor: Colors.background,
         },
         tabBarStyle: {
           position: 'absolute',
@@ -94,7 +102,8 @@ function ClassicTabLayout() {
           borderTopColor: Colors.neutral[100],
           elevation: 0,
           paddingBottom: insets.bottom,
-          ...(isWeb ? { height: 84 } : {}),
+          ...(isWeb && !isDesktop ? { height: 84 } : {}),
+          ...(isDesktop ? { display: 'none' as const } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
@@ -157,8 +166,20 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassEnabled()) {
-    return <NativeTabLayout />;
+  const { isDesktop } = useResponsiveLayout();
+
+  const tabs = isLiquidGlassEnabled()
+    ? <NativeTabLayout />
+    : <ClassicTabLayout />;
+
+  if (isDesktop && isWeb) {
+    return (
+      <View style={{ flex: 1 }}>
+        <WebNavbar />
+        {tabs}
+      </View>
+    );
   }
-  return <ClassicTabLayout />;
+
+  return tabs;
 }

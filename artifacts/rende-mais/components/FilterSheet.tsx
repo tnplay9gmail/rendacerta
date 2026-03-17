@@ -9,12 +9,15 @@ import {
   ScrollView,
   Switch,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors, shadows } from '@/constants/colors';
 import { AppIcon } from '@/components/ui/AppIcon';
 import { LiquidityType, InvestmentType } from '@/constants/data';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.72;
@@ -77,6 +80,11 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const [draft, setDraft] = React.useState<FilterState>(filters);
+  const [contentHeight, setContentHeight] = React.useState(0);
+  const [viewportHeight, setViewportHeight] = React.useState(0);
+  const [showScrollHint, setShowScrollHint] = React.useState(false);
+  const { isDesktop } = useResponsiveLayout();
+  const isWebDesktop = Platform.OS === 'web' && isDesktop;
 
   useEffect(() => {
     if (visible) {
@@ -92,6 +100,11 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
       ]).start();
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setShowScrollHint(contentHeight > viewportHeight + 24);
+  }, [visible, contentHeight, viewportHeight]);
 
   const set = <K extends keyof FilterState>(key: K, val: FilterState[K]) => {
     Haptics.selectionAsync();
@@ -114,16 +127,19 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
   return (
     <Modal transparent animationType="none" visible={visible} onRequestClose={onClose} statusBarTranslucent>
       {/* Backdrop */}
-      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
+      <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }, isWebDesktop && styles.backdropDesktop]}>
         <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={onClose} activeOpacity={1} />
       </Animated.View>
 
       {/* Sheet */}
-      <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
-        {/* Glass header */}
+      <Animated.View style={[
+        isWebDesktop ? styles.sheetDesktop : styles.sheet,
+        isWebDesktop ? {} : { transform: [{ translateY }] },
+      ]}>
+        {/* Header */}
         <BlurView intensity={70} tint="dark" style={styles.sheetHeader}>
           <View style={styles.glassOverlay} />
-          <View style={styles.sheetHandle} />
+          {!isWebDesktop && <View style={styles.sheetHandle} />}
           <View style={styles.sheetTitleRow}>
             <Text style={styles.sheetTitle}>Filtros</Text>
             {hasChanges && (
@@ -140,7 +156,18 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
           </View>
         </BlurView>
 
-        <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
+        <ScrollView
+          style={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 140 }}
+          onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+          onContentSizeChange={(_, height) => setContentHeight(height)}
+          onScroll={({ nativeEvent }) => {
+            const remaining = nativeEvent.contentSize.height - (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height);
+            setShowScrollHint(remaining > 24);
+          }}
+          scrollEventThrottle={16}
+        >
 
           {/* Investment type */}
           <View style={styles.group}>
@@ -259,9 +286,24 @@ export function FilterSheet({ visible, filters, onApply, onClose }: FilterSheetP
             </View>
           </View>
         </ScrollView>
+        {showScrollHint && isWebDesktop && (
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(9,9,11,0)', 'rgba(9,9,11,0.3)']}
+            style={styles.scrollHintFade}
+          />
+        )}
+        {showScrollHint && (
+          <View pointerEvents="none" style={[styles.scrollHintWrap, isWebDesktop && styles.scrollHintWrapDesktop]}>
+            <View style={styles.scrollHint}>
+              <Text style={styles.scrollHintText}>Role para ver mais filtros</Text>
+              <AppIcon name="caret-right" size={14} color={Colors.neutral[300]} style={{ transform: [{ rotate: '90deg' }] }} />
+            </View>
+          </View>
+        )}
 
-        {/* Glass CTA */}
-        <BlurView intensity={80} tint="dark" style={styles.ctaBar}>
+        {/* CTA */}
+        <BlurView intensity={80} tint="dark" style={[styles.ctaBar, isWebDesktop && styles.ctaBarDesktop]}>
           <View style={styles.ctaGlassOverlay} />
           <TouchableOpacity
             style={styles.applyBtn}
@@ -291,6 +333,21 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
+  },
+  sheetDesktop: {
+    position: 'absolute',
+    top: '50%' as unknown as number,
+    left: '50%' as unknown as number,
+    transform: [{ translateX: '-50%' as unknown as number }, { translateY: '-50%' as unknown as number }],
+    width: '100%' as unknown as number,
+    maxWidth: 520,
+    maxHeight: '80%' as unknown as number,
+    backgroundColor: Colors.background,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  backdropDesktop: {
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheetHeader: {
     paddingTop: 12,
@@ -441,6 +498,39 @@ const styles = StyleSheet.create({
   toggleLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: Colors.neutral[950] },
   toggleSub: { fontSize: 12, fontFamily: 'Inter_400Regular', color: Colors.neutral[400], marginTop: 2 },
   toggleSep: { height: 1, backgroundColor: Colors.neutral[100], marginLeft: 64 },
+  scrollHintWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 114,
+    alignItems: 'center',
+  },
+  scrollHintWrapDesktop: {
+    bottom: 90,
+  },
+  scrollHintFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 82,
+    height: 88,
+  },
+  scrollHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(9,9,11,0.78)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  scrollHintText: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    color: Colors.neutral[200],
+  },
   ctaBar: {
     position: 'absolute',
     bottom: 0,
@@ -451,6 +541,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(0,0,0,0.08)',
+  },
+  ctaBarDesktop: {
+    position: 'relative' as unknown as undefined,
+    paddingBottom: 20,
   },
   ctaGlassOverlay: {
     ...StyleSheet.absoluteFillObject,
