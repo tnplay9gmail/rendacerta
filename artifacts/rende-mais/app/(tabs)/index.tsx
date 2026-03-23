@@ -454,20 +454,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginRight: 26,
     minWidth: 118,
-    transitionDuration: '160ms' as unknown as undefined,
-    transitionProperty: 'background-color, border-color, box-shadow, transform' as unknown as undefined,
-    transitionTimingFunction: 'ease' as unknown as undefined,
   },
   filterBtnHover: {
     borderColor: Colors.brand[300],
     backgroundColor: Colors.brand[50],
-    boxShadow: '0 6px 16px rgba(22,163,74,0.12)' as unknown as undefined,
     transform: [{ translateY: -1 }],
   },
   filterBtnActiveHover: {
     backgroundColor: Colors.brand[600],
     borderColor: Colors.brand[600],
-    boxShadow: '0 8px 20px rgba(22,163,74,0.2)' as unknown as undefined,
   },
   filterBtnActive: {
     backgroundColor: Colors.brand[500],

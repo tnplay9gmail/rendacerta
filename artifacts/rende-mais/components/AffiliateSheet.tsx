@@ -211,13 +211,9 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    transitionDuration: '160ms' as unknown as undefined,
-    transitionProperty: 'background-color, border-color, box-shadow, transform' as unknown as undefined,
-    transitionTimingFunction: 'ease' as unknown as undefined,
   },
   continueButtonHover: {
     backgroundColor: Colors.brand[600],
-    boxShadow: '0 8px 22px rgba(22,163,74,0.24)' as unknown as undefined,
     transform: [{ translateY: -1 }],
   },
   continueText: {
@@ -229,9 +225,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderRadius: 10,
-    transitionDuration: '160ms' as unknown as undefined,
-    transitionProperty: 'background-color, color' as unknown as undefined,
-    transitionTimingFunction: 'ease' as unknown as undefined,
   },
   cancelButtonHover: {
     backgroundColor: Colors.neutral[50],

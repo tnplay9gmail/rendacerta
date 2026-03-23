@@ -150,14 +150,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     borderWidth: 1,
     borderColor: 'transparent',
-    transitionDuration: '160ms' as unknown as undefined,
-    transitionProperty: 'background-color, border-color, box-shadow, transform' as unknown as undefined,
-    transitionTimingFunction: 'ease' as unknown as undefined,
   },
   navLinkHover: {
     backgroundColor: Colors.neutral[50],
     borderColor: Colors.neutral[200],
-    boxShadow: '0 8px 20px rgba(24,24,27,0.06)' as unknown as undefined,
     transform: [{ translateY: -1 }],
   },
   navLinkActive: {
